@@ -179,6 +179,28 @@ namespace sdk {
 #endif
     }
 
+    std::string extract_tx_from_psbt(const std::string& psbt)
+    {
+#ifdef BUILD_GDK_RUST
+        return ga_rust::extract_tx_from_psbt(b2h(base64_to_bytes(psbt)));
+#else
+        (void)psbt;
+        GDK_RUNTIME_ASSERT_MSG(false, "PSBT functions not implemented");
+        return std::string();
+#endif
+    }
+
+    std::string merge_tx_in_psbt(const std::string& psbt, const std::string& tx)
+    {
+#ifdef BUILD_GDK_RUST
+        return base64_from_bytes(h2b(ga_rust::merge_tx_in_psbt(b2h(base64_to_bytes(psbt)), tx)));
+#else
+        (void)psbt;
+        GDK_RUNTIME_ASSERT_MSG(false, "PSBT functions not implemented");
+        return std::string();
+#endif
+    }
+
     uint32_t get_uniform_uint32_t(uint32_t upper_bound)
     {
         // Algorithm from the PCG family of random generators

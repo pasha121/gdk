@@ -3702,6 +3702,76 @@ namespace sdk {
         return sign_ga_transaction(*this, details);
     }
 
+    nlohmann::json ga_session::sign_psbt(const nlohmann::json& details)
+    {
+        nlohmann::json result = details;
+        const std::string txhex = extract_tx_from_psbt(details.at("psbt"));
+        const nlohmann::json tx_details = { { "transaction", txhex } };
+        const auto flags = tx_flags(m_net_params.is_liquid());
+        wally_tx_ptr tx = tx_from_hex(txhex, flags);
+
+        // Clear utxos and fill it with the one that will be signed
+        std::vector<nlohmann::json> inputs;
+        inputs.reserve(tx->num_inputs);
+        for (size_t i = 0; i < tx->num_inputs; ++i) {
+            bool found = false;
+            const std::string txhash_hex = b2h_rev(tx->inputs[i].txhash);
+            uint32_t vout = tx->inputs[i].index;
+            for (auto& utxo : result.at("utxos")) {
+                if (utxo.at("txhash") == txhash_hex && utxo.at("pt_idx") == vout) {
+                    // Populate prevout_script, which is needed for signing,
+                    // but not returned by get_unspent_outputs
+                    utxo["prevout_script"] = b2h(output_script_from_utxo(utxo));
+                    inputs.emplace_back(utxo);
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                inputs.emplace_back(nlohmann::json::object());
+            }
+        }
+
+        // Returned utxos are the ones to be signed
+        result["utxos"].clear();
+        for (const auto& utxo : inputs) {
+            if (!utxo.empty()) {
+                result["utxos"].emplace_back(utxo);
+            }
+        }
+
+        if (result["utxos"].empty()) {
+            return result;
+        }
+
+        // FIXME: refactor to use HWW path
+        const auto signatures = sign_ga_transaction(*this, tx_details, inputs).first;
+
+        size_t i = 0;
+        constexpr bool is_low_r = true;
+        for (const auto& utxo : inputs) {
+            if (!utxo.empty()) {
+                add_input_signature(tx, i, utxo, signatures[i], is_low_r);
+            }
+            ++i;
+        }
+
+        // FIXME: handle existing 2FA
+        const nlohmann::json twofactor_data = nlohmann::json::object();
+
+        nlohmann::json private_data;
+        if (result.contains("blinding_nonces")) {
+            private_data["blinding_nonces"] = result["blinding_nonces"];
+            result["blinding_nonces"].clear();
+        }
+
+        auto ret = wamp_cast_json(wamp_call("vault.sign_raw_tx", b2h(tx_to_bytes(tx, flags)),
+            mp_cast(twofactor_data).get(), mp_cast(private_data).get()));
+
+        result["psbt"] = merge_tx_in_psbt(details.at("psbt"), ret.at("tx"));
+        return result;
+    }
+
     nlohmann::json ga_session::send_transaction(const nlohmann::json& details, const nlohmann::json& twofactor_data)
     {
         GDK_RUNTIME_ASSERT(json_get_value(details, "error").empty());

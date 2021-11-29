@@ -611,6 +611,62 @@ Send transaction JSON
 
 
 
+.. _sign-psbt-details:
+
+Sign PSBT JSON
+-------------
+
+.. code-block:: json
+
+  {
+    "psbt": "...",
+    "utxos": [
+      {
+        "address_type": "p2wsh",
+        "block_height": 1448369,
+        "pointer": 474,
+        "prevout_script": "522102ff54a17dc6efe168673dbf679fe97e06b5cdcaf7dea8ab83dc6732350cd1b4e4210279979574e0743b4659093c005256c812f68f512c50d7d1622650b891de2cd61e52ae",
+        "pt_idx": 0,
+        "satoshi": 10000,
+        "script_type": 14,
+        "sequence": 4294967293,
+        "service_xpub": "tpubEAUTpVqYYmDxumXSPwZEgCRC5HZXagbsATdv3wUMweyDrJY4fVDt89ogtpBxa9ynpXB3AyGen3Ko4S8ewpWkkvQsvYP86oEc8z9B6crQ5gn",
+        "subaccount": 0,
+        "subtype": 0,
+        "txhash": "09933a297fde31e6477d5aab75f164e0d3864e4f23c3afd795d9121a296513c0",
+        "user_path": [
+          1,
+          474
+        ]
+      },
+    ],
+    "blinding_nonces": [],
+  }
+
+:psbt: The PSBT or PSET encoded in base64 format.
+:utxos: The utxos that should be signed.
+        Utxos that are not input of the PSBT/PSET can be included.
+        In general, the output of `GA_get_unspent_outputs` can be used.
+:blinding_nonces: For ``"2of2_no_recovery"`` subaccounts only, the blinding nonces for all outputs.
+                  These must be shared by other swap participants.
+
+
+.. _sign-psbt-result:
+
+Sign PSBT JSON
+-------------
+
+.. code-block:: json
+
+  {
+    "psbt": "...",
+    "utxos": [],
+  }
+
+:psbt: The (eventually) signed PSBT or PSET encoded in base64 format.
+:utxos: The utxos which have been signed.
+
+
 .. _estimates:
 
 Fee estimates JSON

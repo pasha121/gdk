@@ -58,6 +58,19 @@ namespace sdk {
                 }
             }
         }
+
+        static nlohmann::json call(const std::string& method, const nlohmann::json& input)
+        {
+            char* output = nullptr;
+            int res = GDKRUST_call(method.c_str(), input.dump().c_str(), &output);
+            nlohmann::json cppjson = nlohmann::json();
+            if (output) {
+                cppjson = nlohmann::json::parse(output);
+                GDKRUST_destroy_string(output);
+            }
+            check_code(res, cppjson);
+            return cppjson;
+        }
     } // namespace
 
     ga_rust::ga_rust(network_parameters&& net_params)
@@ -485,6 +498,11 @@ namespace sdk {
         return call_session("sign_transaction", details);
     }
 
+    nlohmann::json ga_rust::sign_psbt(const nlohmann::json& details)
+    {
+        throw std::runtime_error("sign_psbt not implemented");
+    }
+
     nlohmann::json ga_rust::send_transaction(const nlohmann::json& details, const nlohmann::json& twofactor_data)
     {
         return call_session("send_transaction", details);
@@ -576,6 +594,18 @@ namespace sdk {
     int32_t ga_rust::spv_verify_tx(const nlohmann::json& details)
     {
         return GDKRUST_spv_verify_tx(details.dump().c_str());
+    }
+
+    std::string ga_rust::extract_tx_from_psbt(const std::string& psbt_hex)
+    {
+        const nlohmann::json input = { { "psbt_hex", psbt_hex } };
+        return call("extract_tx_from_psbt", input).at("transaction");
+    }
+
+    std::string ga_rust::merge_tx_in_psbt(const std::string& psbt_hex, const std::string& tx)
+    {
+        const nlohmann::json input = { { "psbt_hex", psbt_hex }, { "transaction", tx } };
+        return call("merge_tx_in_psbt", input).at("psbt_hex");
     }
 
 } // namespace sdk

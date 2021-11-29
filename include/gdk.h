@@ -437,6 +437,17 @@ GDK_API int GA_sign_transaction(
     struct GA_session* session, const GA_json* transaction_details, struct GA_auth_handler** call);
 
 /**
+ * Sign the user's inputs of a PSBT or PSET.
+ *
+ * :param session: The session to use.
+ * :param details: The :ref:`sign-psbt-details` for signing.
+ * :param call: Destination for the resulting GA_auth_handler to perform the signing.
+ *|     The call handlers result is :ref:`sign-psbt-result`.
+ *|     Returned GA_auth_handler should be freed using `GA_destroy_auth_handler`.
+ */
+GDK_API int GA_sign_psbt(struct GA_session* session, const GA_json* details, struct GA_auth_handler** call);
+
+/**
  * Broadcast a non-Green signed transaction to the P2P network.
  *
  * :param session: The session to use.
