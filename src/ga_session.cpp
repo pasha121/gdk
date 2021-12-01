@@ -3759,7 +3759,7 @@ namespace sdk {
         auto ret = wamp_cast_json(wamp_call("vault.sign_raw_tx", b2h(tx_to_bytes(tx, flags)),
             mp_cast(twofactor_data).get(), mp_cast(private_data).get()));
 
-        result["psbt"] = merge_tx_in_psbt(details.at("psbt"), ret.at("tx"));
+        result["psbt"] = psbt_merge_tx(details.at("psbt"), ret.at("tx"));
         for (const auto& utxo : inputs) {
             if (!utxo.empty()) {
                 result["utxos"].emplace_back(std::move(utxo));

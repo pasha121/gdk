@@ -33,7 +33,7 @@ namespace sdk {
     std::string psbt_extract_tx(const std::string& psbt);
 
     // Merge a transaction in a PSBT or PSET
-    std::string merge_tx_in_psbt(const std::string& psbt, const std::string& tx);
+    std::string psbt_merge_tx(const std::string& psbt, const std::string& tx);
 
     // STL compatible RNG returning uniform uint32_t's
     struct uniform_uint32_rng {

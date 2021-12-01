@@ -190,10 +190,10 @@ namespace sdk {
 #endif
     }
 
-    std::string merge_tx_in_psbt(const std::string& psbt, const std::string& tx)
+    std::string psbt_merge_tx(const std::string& psbt, const std::string& tx)
     {
 #ifdef BUILD_GDK_RUST
-        return base64_from_bytes(h2b(ga_rust::merge_tx_in_psbt(b2h(base64_to_bytes(psbt)), tx)));
+        return base64_from_bytes(h2b(ga_rust::psbt_merge_tx(b2h(base64_to_bytes(psbt)), tx)));
 #else
         (void)psbt;
         GDK_RUNTIME_ASSERT_MSG(false, "PSBT functions not implemented");
