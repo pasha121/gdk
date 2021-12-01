@@ -596,10 +596,10 @@ namespace sdk {
         return GDKRUST_spv_verify_tx(details.dump().c_str());
     }
 
-    std::string ga_rust::extract_tx_from_psbt(const std::string& psbt_hex)
+    std::string ga_rust::psbt_extract_tx(const std::string& psbt_hex)
     {
         const nlohmann::json input = { { "psbt_hex", psbt_hex } };
-        return call("extract_tx_from_psbt", input).at("transaction");
+        return call("psbt_extract_tx", input).at("transaction");
     }
 
     std::string ga_rust::merge_tx_in_psbt(const std::string& psbt_hex, const std::string& tx_hex)

@@ -30,7 +30,7 @@ namespace sdk {
     int32_t spv_verify_tx(const nlohmann::json& details);
 
     // Extract the transaction from a PSBT or PSET
-    std::string extract_tx_from_psbt(const std::string& psbt);
+    std::string psbt_extract_tx(const std::string& psbt);
 
     // Merge a transaction in a PSBT or PSET
     std::string merge_tx_in_psbt(const std::string& psbt, const std::string& tx);

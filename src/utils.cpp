@@ -179,10 +179,10 @@ namespace sdk {
 #endif
     }
 
-    std::string extract_tx_from_psbt(const std::string& psbt)
+    std::string psbt_extract_tx(const std::string& psbt)
     {
 #ifdef BUILD_GDK_RUST
-        return ga_rust::extract_tx_from_psbt(b2h(base64_to_bytes(psbt)));
+        return ga_rust::psbt_extract_tx(b2h(base64_to_bytes(psbt)));
 #else
         (void)psbt;
         GDK_RUNTIME_ASSERT_MSG(false, "PSBT functions not implemented");

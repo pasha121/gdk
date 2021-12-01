@@ -3705,7 +3705,7 @@ namespace sdk {
     nlohmann::json ga_session::psbt_sign(const nlohmann::json& details)
     {
         nlohmann::json result = details;
-        std::string tx_hex = extract_tx_from_psbt(details.at("psbt"));
+        std::string tx_hex = psbt_extract_tx(details.at("psbt"));
         const auto flags = tx_flags(m_net_params.is_liquid());
         wally_tx_ptr tx = tx_from_hex(tx_hex, flags);
         const nlohmann::json tx_details = { { "transaction", std::move(tx_hex) } };
