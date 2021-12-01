@@ -523,7 +523,7 @@ pub extern "C" fn GDKRUST_call(
 
 fn handle_call(method: &str, input: &str) -> Result<String, Error> {
     match method {
-        "extract_tx_from_psbt" => {
+        "psbt_extract_tx" => {
             let param: ExtractTxParam = serde_json::from_str(input)?;
             Ok(to_string(&gdk_electrum::pset::extract_tx(&param)?))
         }
