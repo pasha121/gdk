@@ -355,7 +355,7 @@ public class Session {
     }
 
     public func signPsbt(details: [String: Any]) throws -> TwoFactorCall {
-        return try jsonFuncToCallHandlerWrapper(input: details, fun: GA_sign_psbt)
+        return try jsonFuncToCallHandlerWrapper(input: details, fun: GA_psbt_sign)
     }
 
     public func sendTransaction(details: [String: Any]) throws -> TwoFactorCall {

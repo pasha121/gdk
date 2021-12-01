@@ -622,17 +622,17 @@ namespace sdk {
     //
     // Sign PSBT
     //
-    sign_psbt_call::sign_psbt_call(session& session, const nlohmann::json& details)
+    psbt_sign_call::psbt_sign_call(session& session, const nlohmann::json& details)
         : auth_handler_impl(session, "sign_transaction")
         , m_details(details)
         , m_initialized(false)
     {
     }
 
-    void sign_psbt_call::initialize()
+    void psbt_sign_call::initialize()
     {
         if (m_net_params.is_electrum() || !m_net_params.is_liquid() || !get_signer()->is_hardware()) {
-            m_result = m_session->sign_psbt(m_details);
+            m_result = m_session->psbt_sign(m_details);
             m_state = state_type::done;
         } else {
             // TODO: hww interactions (anti exfil, set signing data, etc)
@@ -640,7 +640,7 @@ namespace sdk {
         }
     }
 
-    auth_handler::state_type sign_psbt_call::call_impl()
+    auth_handler::state_type psbt_sign_call::call_impl()
     {
         if (!m_initialized) {
             initialize();

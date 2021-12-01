@@ -3702,7 +3702,7 @@ namespace sdk {
         return sign_ga_transaction(*this, details);
     }
 
-    nlohmann::json ga_session::sign_psbt(const nlohmann::json& details)
+    nlohmann::json ga_session::psbt_sign(const nlohmann::json& details)
     {
         nlohmann::json result = details;
         const std::string txhex = extract_tx_from_psbt(details.at("psbt"));
