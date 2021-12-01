@@ -531,7 +531,7 @@ fn handle_call(method: &str, input: &str) -> Result<String, Error> {
             let param: FromTxParam = serde_json::from_str(input)?;
             Ok(to_string(&gdk_electrum::pset::from_tx(&param)?))
         }
-        "merge_tx_in_psbt" => {
+        "psbt_merge_tx" => {
             let param: MergeTxParam = serde_json::from_str(input)?;
             Ok(to_string(&gdk_electrum::pset::merge_tx(&param)?))
         }
