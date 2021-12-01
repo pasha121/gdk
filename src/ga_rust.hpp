@@ -132,7 +132,7 @@ namespace sdk {
         static int32_t spv_verify_tx(const nlohmann::json& details);
 
         static std::string extract_tx_from_psbt(const std::string& psbt_hex);
-        static std::string merge_tx_in_psbt(const std::string& psbt_hex, const std::string& tx);
+        static std::string merge_tx_in_psbt(const std::string& psbt_hex, const std::string& tx_hex);
 
     private:
         nlohmann::json call_session(const std::string& method, const nlohmann::json& input) const;

@@ -602,9 +602,9 @@ namespace sdk {
         return call("extract_tx_from_psbt", input).at("transaction");
     }
 
-    std::string ga_rust::merge_tx_in_psbt(const std::string& psbt_hex, const std::string& tx)
+    std::string ga_rust::merge_tx_in_psbt(const std::string& psbt_hex, const std::string& tx_hex)
     {
-        const nlohmann::json input = { { "psbt_hex", psbt_hex }, { "transaction", tx } };
+        const nlohmann::json input = { { "psbt_hex", psbt_hex }, { "transaction", tx_hex } };
         return call("merge_tx_in_psbt", input).at("psbt_hex");
     }
 
