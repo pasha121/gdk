@@ -437,7 +437,7 @@ GDK_API int GA_sign_transaction(
     struct GA_session* session, const GA_json* transaction_details, struct GA_auth_handler** call);
 
 /**
- * Sign the user's inputs of a PSBT or PSET.
+ * Sign one or more of a user's inputs in a PSBT or PSET.
  *
  * :param session: The session to use.
  * :param details: The :ref:`sign-psbt-details` for signing.
