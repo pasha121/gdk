@@ -40,9 +40,7 @@ pub fn merge_tx(param: &MergeTxParam) -> Result<MergeTxResult, Error> {
 
     let tx = tx_from_hex(&param.transaction)?;
 
-    if pset_tx.txid() != tx.txid() {
-        return Err(Error::PsetAndTxMismatch);
-    }
+    compare_except_script_sig_sequence(&pset_tx, &tx)?;
 
     for (pset_input, tx_input) in pset.inputs.iter_mut().zip(tx.input.iter()) {
         pset_input.final_script_witness = Some(tx_input.witness.script_witness.clone());
@@ -98,6 +96,24 @@ fn extract_tx_inner(pset: &mut pset::PartiallySignedTransaction) -> Result<Trans
     }
     let tx = pset.extract_tx()?;
     Ok(tx)
+}
+
+fn compare_except_script_sig_sequence(tx1: &Transaction, tx2: &Transaction) -> Result<(), Error> {
+    let mut tx1 = tx1.clone();
+    let mut tx2 = tx2.clone();
+    for inp in tx1.input.iter_mut() {
+        inp.sequence = 0;
+        inp.script_sig = elements::Script::default();
+    }
+    for inp in tx2.input.iter_mut() {
+        inp.sequence = 0;
+        inp.script_sig = elements::Script::default();
+    }
+    if tx1.txid() != tx2.txid() {
+        Err(Error::PsetAndTxMismatch)
+    } else {
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -210,5 +226,25 @@ mod test {
             .unwrap();
             assert_eq!(tx.to_string(), extract.transaction);
         }
+    }
+
+    #[test]
+    fn test_compare_except_script_sig_sequence() {
+        let tx = tx_from_hex(ONE_INPUT_TX).unwrap();
+        assert!(compare_except_script_sig_sequence(&tx, &tx).is_ok());
+
+        let mut tx2 = tx.clone();
+        assert!(compare_except_script_sig_sequence(&tx, &tx2).is_ok());
+        tx2.input[0].script_sig = elements::Script::from_hex("00").unwrap();
+        assert!(compare_except_script_sig_sequence(&tx, &tx2).is_ok());
+        tx2.input[0].previous_output.vout = 99;
+        assert!(compare_except_script_sig_sequence(&tx, &tx2).is_err());
+
+        let mut tx2 = tx.clone();
+        assert!(compare_except_script_sig_sequence(&tx, &tx2).is_ok());
+        tx2.input[0].sequence = 1000;
+        assert!(compare_except_script_sig_sequence(&tx, &tx2).is_ok());
+        tx2.input[0].previous_output.vout = 99;
+        assert!(compare_except_script_sig_sequence(&tx, &tx2).is_err());
     }
 }
