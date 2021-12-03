@@ -623,7 +623,7 @@ namespace sdk {
     // Sign PSBT
     //
     psbt_sign_call::psbt_sign_call(session& session, const nlohmann::json& details)
-        : auth_handler_impl(session, "sign_transaction")
+        : auth_handler_impl(session, "psbt_sign")
         , m_details(details)
         , m_initialized(false)
     {
