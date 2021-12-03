@@ -627,14 +627,14 @@ Sign PSBT JSON
 :psbt: The PSBT or PSET encoded in base64 format.
 :utxos: The UTXOs that should be signed, in the format returned by `GA_get_unspent_outputs`.
         UTXOs that are not inputs of the PSBT/PSET can be included.
-        Caller can avoid singing an input by not passing in its UTXO.
+        Caller can avoid signing an input by not passing in its UTXO.
 :blinding_nonces: For ``"2of2_no_recovery"`` subaccounts only, the blinding nonces in hex format for all outputs.
 
 
 .. _sign-psbt-result:
 
-Sign PSBT JSON
---------------
+Sign PSBT Result JSON
+---------------------
 
 .. code-block:: json
 
