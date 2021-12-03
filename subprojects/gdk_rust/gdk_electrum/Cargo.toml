@@ -30,4 +30,4 @@ half = "~1.7"
 
 bitcoin = { version = "0.27", features = [ "use-serde", "rand" ] }
 #elements = { version = "0.18", features = ["serde-feature"] }
-elements = { git = "https://github.com/RCasatta/rust-elements", rev = "eced02b211f9c4344782a7a66dcc782bb1c2450a", features = ["serde-feature"] }
+elements = { git = "https://github.com/sanket1729/rust-elements", rev = "dc350a0b8664cdd5b051443810a6a1f99a6173da", features = ["serde-feature"] }
