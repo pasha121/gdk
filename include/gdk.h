@@ -444,6 +444,8 @@ GDK_API int GA_sign_transaction(
  * :param call: Destination for the resulting GA_auth_handler to perform the signing.
  *|     The call handlers result is :ref:`sign-psbt-result`.
  *|     Returned GA_auth_handler should be freed using `GA_destroy_auth_handler`.
+ *
+ * .. note:: EXPERIMENTAL warning: this call may be changed in future releases.
  */
 GDK_API int GA_psbt_sign(struct GA_session* session, const GA_json* details, struct GA_auth_handler** call);
 
