@@ -483,8 +483,8 @@ struct JsonError {
     error: String,
 }
 
-fn build_error(method: &str, error: &Error) -> String {
-    let message = format!("error in {}: {}", method, error.gdk_display());
+fn build_error(_method: &str, error: &Error) -> String {
+    let message = format!("{}", error.gdk_display());
     let error = error.to_gdk_code();
     let json_error = JsonError {
         message,
