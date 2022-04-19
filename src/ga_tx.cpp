@@ -236,7 +236,16 @@ namespace sdk {
             }
             GDK_RUNTIME_ASSERT(subaccount_ok);
 
-            const auto tx = session.get_raw_transaction_details(prev_tx.at("txhash"));
+            wally_tx_ptr tx;
+            if (is_electrum) {
+                // FIXME: Rust session returns the tx with the witness data
+                // stripped, which prevents checking the signatures.
+                // Fake this for POC testing by expecting the actual tx hex
+                // in input["previous_transaction"]["transaction"]
+                tx = tx_from_hex(prev_tx.at("transaction"), tx_flags(is_liquid));
+            } else {
+                tx = session.get_raw_transaction_details(prev_tx.at("txhash"));
+            }
             const auto min_fee_rate = session.get_min_fee_rate();
 
             // Store the old fee and fee rate to check if replacement
