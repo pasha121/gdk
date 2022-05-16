@@ -411,6 +411,7 @@ namespace sdk {
         {
             const auto& net_params = session.get_network_parameters();
             const bool is_liquid = net_params.is_liquid();
+            const bool is_electrum = net_params.is_electrum();
             const auto policy_asset = is_liquid ? net_params.policy_asset() : std::string("btc");
 
             result["error"] = std::string(); // Clear any previous error
@@ -657,14 +658,19 @@ namespace sdk {
                     const uint32_t change_subaccount = result.value("change_subaccount", subaccount);
                     result["change_subaccount"] = change_subaccount;
                     auto change_address = session.get_receive_address({ { "subaccount", change_subaccount } });
+
                     if (is_liquid) {
+                        if (is_electrum) {
+                            // FIXME: ga_rust.get_receive_address() should return
+                            // unblinded addrs, and have the auth handler blind them,
+                            // so this code can be removed.
+                            unblind_address(net_params, change_address);
+                        }
                         // set a temporary blinding key, will be changed later through the resolvers. we need
                         // to have one because all our create_transaction logic relies on being able to blind
                         // the tx for a few things (fee estimation for instance).
-                        const auto blinded_prefix = session.get_network_parameters().blinded_prefix();
-                        const char* pubkey = "0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798";
-                        const auto& unblinded_addr = change_address.at("address");
-                        change_address["address"] = confidential_addr_from_addr(unblinded_addr, blinded_prefix, pubkey);
+                        const char* pubkey_hex = "0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798";
+                        blind_address(net_params, change_address, pubkey_hex);
                         change_address["is_blinded"] = false;
                     }
 
@@ -968,6 +974,19 @@ namespace sdk {
         }
         addr["blinding_key"] = blinding_pubkey_hex;
         addr["is_blinded"] = true;
+    }
+
+    void unblind_address(const network_parameters& net_params, nlohmann::json& addr)
+    {
+        auto& address = addr.at("address");
+        const std::string blech32_prefix = net_params.blech32_prefix();
+        if (boost::starts_with(address.get<std::string>(), blech32_prefix)) {
+            auto&& fn = confidential_addr_to_addr_segwit;
+            address = fn(address, blech32_prefix, net_params.bech32_prefix());
+        } else {
+            address = confidential_addr_to_addr(address, net_params.blinded_prefix());
+        }
+        addr["is_blinded"] = false;
     }
 
     nlohmann::json create_ga_transaction(session_impl& session, const nlohmann::json& details)
