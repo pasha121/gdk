@@ -80,11 +80,6 @@ namespace sdk {
                 tx_add_raw_input(
                     tx, txid, index, sequence, dummy_external_input_script(low_r, h2b(utxo.at("public_key"))));
             } else {
-                // Populate the prevout script if missing so signing can use it later
-                if (utxo.find("prevout_script") == utxo.end()) {
-                    const auto script = session.output_script_from_utxo(utxo);
-                    utxo["prevout_script"] = b2h(script);
-                }
                 const auto script = h2b(utxo["prevout_script"]);
 
                 add_paths(session, utxo);

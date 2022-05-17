@@ -2063,6 +2063,7 @@ namespace sdk {
         // and script needed to generate its blinding nonce in 'missing'.
         for (auto& utxo : utxos) {
             const bool is_external = !json_get_value(utxo, "private_key").empty();
+            const bool is_relevant = json_get_value(utxo, "is_relevant", !is_external);
 
             auto address_type_p = utxo.find("address_type");
             if (is_liquid && utxo.value("error", std::string()) == "missing blinding nonce") {
@@ -2104,7 +2105,7 @@ namespace sdk {
                     utxo["satoshi"] = json_get_value<amount::value_type>(utxo, "value");
                 } else {
                     if (is_liquid) {
-                        if (json_get_value(utxo, "is_relevant", true)) {
+                        if (is_relevant) {
                             updated_blinding_cache |= unblind_utxo(locker, utxo, for_txhash, missing);
                         } else {
                             constexpr bool mark_unblinded = false;
@@ -2128,6 +2129,14 @@ namespace sdk {
                 json_add_if_missing(utxo, "subtype", 0u);
                 json_add_if_missing(utxo, "is_internal", false);
                 utxo["address_type"] = addr_type;
+                if (is_relevant && (!m_watch_only || m_blob_aes_key != boost::none)) {
+                    // Provide prevout script for address checking and bumping.
+                    // TODO: Remove this check when the backend provides
+                    // subtype unconditionally
+                    if (addr_type != address_type::csv || utxo["subtype"] != 0) {
+                        utxo["prevout_script"] = b2h(output_script_from_utxo(locker, utxo));
+                    }
+                }
             }
         }
 
@@ -3334,8 +3343,6 @@ namespace sdk {
             auto input_utxo = nlohmann::json::object();
             for (auto& utxo : result.at("utxos")) {
                 if (!utxo.empty() && utxo.at("txhash") == txhash_hex && utxo.at("pt_idx") == vout) {
-                    // TODO: remove this once get_unspent_outputs populates prevout_script
-                    utxo["prevout_script"] = b2h(output_script_from_utxo(utxo));
                     input_utxo = std::move(utxo);
                     requires_signatures = true;
                     break;
