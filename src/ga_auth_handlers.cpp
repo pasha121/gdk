@@ -687,6 +687,14 @@ namespace sdk {
             // We haven't signed the users inputs yet, do so now
             sign_user_inputs(signer);
         }
+        // FIXME: Finalise caller interface for requesting server signing
+        // For testing, adding server_sign=true to the input json will
+        // trigger server signing
+        if (json_get_value(m_tx_details, "server_sign", false) && !json_get_value(m_result, "server_signed", false)) {
+            // We haven't signed the users inputs yet, do so now
+            constexpr bool sign_only = true;
+            add_next_handler(new send_transaction_call(m_session_parent, m_result, sign_only));
+        }
         return state_type::done;
     }
 
@@ -759,6 +767,13 @@ namespace sdk {
         m_result["user_signed"] = true;
         m_result["blinded"] = true;
         update_tx_size_info(m_net_params, tx, m_result);
+    }
+
+    bool sign_transaction_call::on_next_handler_complete(auth_handler* next_handler)
+    {
+        // We have completed server signing, copy the result into our result
+        m_result = std::move(next_handler->move_result());
+        return false; // Don't continue through the auto auth handler, we are done
     }
 
     //
