@@ -181,21 +181,44 @@ impl Account {
         )
     }
 
-    pub fn get_next_address(&self) -> Result<AddressPointer, Error> {
+    pub fn get_next_address(&self, is_change: bool) -> Result<AddressPointer, Error> {
         let pointer = {
             let store = &mut self.store.write()?;
             let acc_store = store.account_cache_mut(self.account_num)?;
-
-            acc_store.indexes.external += 1;
-            acc_store.indexes.external
+            if is_change {
+                acc_store.indexes.internal += 1;
+                acc_store.indexes.internal
+            } else {
+                acc_store.indexes.external += 1;
+                acc_store.indexes.external
+            }
         };
-        let account_path = DerivationPath::from(&[0.into(), pointer.into()][..]); // 0 is external
+        let int_ext = if is_change {
+            1
+        } else {
+            0
+        };
+        let account_path = DerivationPath::from(&[int_ext.into(), pointer.into()][..]);
         let user_path = self.get_full_path(&account_path);
-        let address = self.derive_address(false, pointer)?.to_string();
+        let address = self.derive_address(is_change, pointer)?;
+        let script_pubkey = &address.script_pubkey();
+        let script_pubkey_hex: Option<String> = match &address.blinding_pubkey() {
+            None => None,
+            Some(_pubkey) => Some(script_pubkey.to_hex()),
+        };
+        let blinding_key_hex: Option<String> = match &address.blinding_pubkey() {
+            None => None,
+            Some(pubkey) => Some(pubkey.to_string()),
+        };
         Ok(AddressPointer {
-            address,
-            pointer,
+            subaccount: self.account_num,
+            address_type: self.script_type.to_string(),
+            address: address.to_string(),
+            script_pubkey: script_pubkey_hex,
+            blinding_key: blinding_key_hex,
+            pointer: pointer,
             user_path: user_path.into(),
+            is_internal: is_change,
         })
     }
 

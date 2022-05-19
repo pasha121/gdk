@@ -773,7 +773,8 @@ impl ElectrumSession {
 
     pub fn get_receive_address(&self, opt: &GetAddressOpt) -> Result<AddressPointer, Error> {
         debug!("get_receive_address {:?}", opt);
-        let address = self.get_account(opt.subaccount)?.get_next_address()?;
+        let address =
+            self.get_account(opt.subaccount)?.get_next_address(opt.is_internal.unwrap_or(false))?;
         debug!("get_address {:?}", address);
         Ok(address)
     }
