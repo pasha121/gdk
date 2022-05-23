@@ -322,13 +322,6 @@ namespace sdk {
             }
 
             m_signer = new_signer;
-            if (is_electrum) {
-                if (m_net_params.is_liquid()) {
-                    // FIXME: Implement rust liquid login via authenticate()
-                    m_result = m_session->login(new_signer);
-                    return state_type::done;
-                }
-            }
 
             // We need master pubkey for the challenge, client secret pubkey for login
             try {
