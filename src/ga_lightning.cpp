@@ -68,10 +68,6 @@ namespace sdk {
         throw std::runtime_error("not implemented");
     }
 
-    nlohmann::json ga_lightning::login(std::shared_ptr<signer> signer)
-    {
-        throw std::runtime_error("login not implemented");
-    }
     nlohmann::json ga_lightning::credentials_from_pin_data(const nlohmann::json& pin_data)
     {
         throw std::runtime_error("credentials_from_pin_data not implemented");
