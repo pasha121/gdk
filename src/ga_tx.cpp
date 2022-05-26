@@ -208,6 +208,7 @@ namespace sdk {
         static std::pair<bool, bool> check_bump_tx(session_impl& session, nlohmann::json& result, uint32_t subaccount)
         {
             const auto& net_params = session.get_network_parameters();
+            const bool is_liquid = net_params.is_liquid();
             const bool is_electrum = net_params.is_electrum();
             const std::string policy_asset("btc"); // FIXME: Bump/CPFP for liquid
 
@@ -384,11 +385,12 @@ namespace sdk {
                 // from being modified.
                 uint32_t vin = 0;
                 for (const auto& input : result["old_used_utxos"]) {
-                    const auto sigs = get_signatures_from_input(input, tx, vin, net_params.is_liquid());
+                    const auto sigs = get_signatures_from_input(input, tx, vin, is_liquid);
                     const auto pubkeys = session.pubkeys_from_utxo(input);
                     const auto script_hash = get_script_hash(net_params, input, tx, vin);
-                    GDK_RUNTIME_ASSERT(ec_sig_verify(pubkeys.at(0), script_hash, sigs.at(0))); // ga
-                    GDK_RUNTIME_ASSERT(ec_sig_verify(pubkeys.at(1), script_hash, sigs.at(1))); // user
+                    for (size_t i = 0; i < sigs.size(); ++i) {
+                        GDK_RUNTIME_ASSERT(ec_sig_verify(pubkeys.at(i), script_hash, sigs.at(i)));
+                    }
                     ++vin;
                 }
             } else {
