@@ -4,6 +4,7 @@
 #include "ga_rust.hpp"
 #include "ga_session.hpp"
 #include "ga_tor.hpp"
+#include "ga_tx.hpp"
 #include "http_client.hpp"
 #include "logging.hpp"
 #include "signer.hpp"
@@ -302,6 +303,15 @@ namespace sdk {
             // Add the master blinding key to the signer to allow it to unblind.
             // This validates the key is of the correct format
             get_nonnull_signer()->set_master_blinding_key(master_blinding_key_hex);
+        }
+    }
+
+    nlohmann::json session_impl::create_transaction(const nlohmann::json& details)
+    {
+        try {
+            return create_ga_transaction(*this, details);
+        } catch (const user_error& e) {
+            return nlohmann::json({ { "error", e.what() } });
         }
     }
 
