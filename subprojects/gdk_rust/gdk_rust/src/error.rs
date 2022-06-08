@@ -23,6 +23,9 @@ pub enum Error {
     #[error(transparent)]
     Registry(#[from] gdk_registry::Error),
 
+    #[error(transparent)]
+    Greenlight(#[from] gdk_greenlight::Error),
+
     #[error(
         "{}method not found: {method:?}",
         if *.in_session { "session " } else {""}

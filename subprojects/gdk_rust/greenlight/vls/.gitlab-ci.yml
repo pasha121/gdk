@@ -1,0 +1,62 @@
+stages:
+  - build
+
+rust-latest:
+  stage: build
+  image: rust:latest
+  script:
+    - rustup component add rustfmt
+    - cargo build # make sure it builds without test_utils
+    - cargo build --features test_utils
+    - cargo test --features test_utils
+    # ensure vls-persist build with no-std
+    - cargo build -p vls-persist --no-default-features --features no-std
+    - (cd lightning-storage-server && cargo test)
+
+rust-1.60.0:
+  stage: build
+  image: rust:1.60.0
+  script:
+    - rustup component add rustfmt
+    - cargo build # make sure it builds with test_utils
+    - cargo build --features test_utils
+    - cargo test --features test_utils
+    - (cd lightning-storage-server && cargo test)
+
+embedded:
+  stage: build
+  image: devrandom01/rust-qemu:nightly-1-63-2022-05-16
+  variables:
+    RUSTFLAGS: "-C link-arg=-Tlink.x"
+    CARGO_TARGET_THUMBV7M_NONE_EABI_RUNNER: "qemu-system-arm -cpu cortex-m3 -machine mps2-an385 -nographic -semihosting-config enable=on,target=native -kernel"
+  script:
+    - cd embedded && cargo run --release --target thumbv7m-none-eabi
+
+wasm:
+  stage: build
+  image: devrandom01/rust-qemu:nightly-1-63-2022-05-16
+  script:
+    - cd wasm
+    - wasm-pack test --firefox --headless
+    - cargo test
+
+demo-signer:
+  stage: build
+  image: devrandom01/rust-qemu:nightly-1-63-2022-05-16
+  script:
+    - cd vls-signer-stm32 && cargo build --features stm32f412,sdio --release --bin demo_signer
+
+coverage:
+  stage: build
+  image: rust:latest
+  before_script:
+    - rustup component add rustfmt
+    - cargo install cargo-kcov
+    - apt-get update
+    - apt-get install -y cmake g++ pkg-config jq
+    - apt-get install -y libcurl4-openssl-dev libelf-dev libdw-dev binutils-dev libiberty-dev
+    - cargo kcov --print-install-kcov-sh | sh
+  script:
+    - cd lightning-signer-core && CARGO_TARGET_DIR=target/kcov cargo kcov --verbose --lib --features test_utils -- --verify --exclude-pattern=/home/user/.cargo,/usr/include,/usr/src/debug,src/util/loopback.rs,src/util/functional_test_util.rs
+  after_script:
+    - bash <(curl -s https://codecov.io/bash) -t "${CODECOV_TOKEN}"

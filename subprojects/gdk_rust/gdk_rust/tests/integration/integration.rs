@@ -14,7 +14,6 @@ use tempfile::TempDir;
 use gdk_common::be::BETransaction;
 use gdk_common::model::*;
 use gdk_common::scripts::ScriptType;
-use gdk_common::session::Session;
 use gdk_common::{NetworkId, NetworkParameters, State};
 use gdk_electrum::error::Error;
 use gdk_electrum::headers::bitcoin::HeadersChain;

@@ -1,0 +1,6 @@
+dist
+__pycache__
+device.crt
+device-key.pem
+hsm_secret
+*.so

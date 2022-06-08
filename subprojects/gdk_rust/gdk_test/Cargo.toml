@@ -11,7 +11,13 @@ electrum-client = { version = "0.12.0", default-features = false, features = [ "
 env_logger = "0.9.0"
 gdk-common = { path = "../gdk_common" }
 gdk-electrum = { path = "../gdk_electrum", features = ["testing"] }
+gdk-greenlight = { path = "../gdk_greenlight" }
+
 log = "0.4.8"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 tempfile = "3.2.0"
+bip39 = { version = "1.0", features = ["rand"] }
+clightningrpc = { git="https://github.com/laanwj/rust-clightning-rpc", rev="8ba2d6c7735c598b64a5fcfca9285b54b7f864c3" }
+bitcoincore-rpc = "0.16.0"
+gl-client = { path="../greenlight/libs/gl-client", features = ["use-serde"] }

@@ -36,6 +36,7 @@ OUT_LIB_FILE="libgdk_rust.a"
 CARGO_ARGS=()
 
 cd "$BUILD_ROOT/subprojects/gdk_rust"
+git submodule update --init
 
 if [ "$(uname)" = "Darwin" ]; then
     export CARGO_PROFILE_DEV_LTO=true

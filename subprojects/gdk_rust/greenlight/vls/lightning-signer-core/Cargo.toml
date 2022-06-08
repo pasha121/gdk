@@ -1,0 +1,93 @@
+[package]
+name = "lightning-signer-core"
+license = "Apache-2.0"
+version = "0.1.0-5"
+authors = ["Devrandom <c1.devrandom@niftybox.net>", "Ken Sedgwick <ken@bonsai.com>"]
+edition = "2018"
+description = "A library for implementing a Lightning signer, which externalizes and secures cryptographic operations."
+homepage = "https://gitlab.com/lightning-signer/docs/"
+repository = "https://gitlab.com/lightning-signer/validating-lightning-signer"
+readme = "../README.md"
+rust-version = "1.45.2"
+
+[features]
+
+default = ["std", "env_logger", "debug"]
+
+no-std = ["lightning/no-std", "lightning-invoice/no-std", "bitcoin/no-std", "core2/alloc"]
+std = ["lightning/std", "lightning-invoice/std", "bitcoin/std", "bitcoin/rand"]
+serde = ["bitcoin/serde"]
+secp-lowmemory = ["bitcoin/secp-lowmemory"]
+
+# if you use tonic, this is convenient for auto-conversion of MySigner Status to tonic::Status
+grpc = ["tonic"]
+
+# Turn this feature on to run `cargo test`, which launches the functional tests
+test_utils = ["use_backtrace", "lightning/_test_utils", "lightning/unsafe_revoked_tx_signing", "bitcoin/bitcoinconsensus"]
+
+debug = ["log_pretty_print", "debug_enforcement_state"]
+
+use_backtrace = ["backtrace"]
+
+log_pretty_print = []
+
+# trace the enforcement_state at debug level
+debug_enforcement_state = []
+
+[lib]
+name = "lightning_signer"
+path = "src/lib.rs"
+
+[dependencies]
+core2 = { version = "0.3.0", optional = true, default-features = false }
+
+# Disable default enabled “std” feature
+anyhow = { version = "1.0", default-features = false }
+
+# Disable default enabled “use_std” feature
+scopeguard = { version = "1.1.0", default-features = false }
+
+# Don't use "std" feature
+log = "0.4.14"
+
+env_logger = { version = "0.9.0", optional = true }
+backtrace = { version = "0.3", optional = true }
+tonic = { version = "0.6.2", optional = true, default-features = false }
+
+hashbrown = "0.11" # match hashbrown dependency version via lightning
+itertools = { version = "0.10", default-features = false }
+
+[dev-dependencies]
+paste = "1.0"
+# For logging in unit tests
+test-log = "0.2.8"
+
+# TODO point this and lightning-invoice at next release
+[dependencies.lightning]
+git = "https://github.com/lightningdevkit/rust-lightning.git"
+rev = "ea5b62fff69847941434fb51562e302eb4e7ff4b"
+#path = "../../rust-lightning/lightning"
+#version = "0.0.110"
+default-features = false
+features = ["grind_signatures"]
+
+[dependencies.lightning-invoice]
+git = "https://github.com/lightningdevkit/rust-lightning.git"
+rev = "ea5b62fff69847941434fb51562e302eb4e7ff4b"
+#path = "../../rust-lightning/lightning-invoice"
+#version = "0.18.0"
+default-features = false
+
+[dependencies.bitcoin]
+version = "0.29"
+default-features = false
+
+[[bin]]
+name = "example_main"
+path = "src/example_main.rs"
+required-features = ["use_backtrace"]
+
+[[test]]
+name = "functional_test"
+path = "tests/functional_test.rs"
+required-features = ["test_utils", "use_backtrace"]

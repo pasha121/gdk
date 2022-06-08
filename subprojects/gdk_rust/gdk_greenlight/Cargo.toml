@@ -1,0 +1,29 @@
+[package]
+name = "gdk-greenlight"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+gl-client = { path="../greenlight/libs/gl-client", features = ["use-serde"] }
+bitcoin = { version = "0.29", features = [ "serde" ] }
+anyhow = "*"
+gdk-common = { path = "../gdk_common" }
+tokio = { version = "*", features = ["full"] }
+env_logger = "*"
+prost = "0.8"
+rand = "*"
+thiserror = "1.0"
+tonic = "^0.8"
+log = "*"
+aes-gcm-siv = "0.10.3"
+bip39 = { version = "1.0", features = ["rand"] }
+
+[dev-dependencies]
+gdk-test = { path = "../gdk_test" }
+tempfile = "3.2.0"
+bitcoincore-rpc = "0.16.0"
+clightningrpc = { git="https://github.com/laanwj/rust-clightning-rpc", rev="8ba2d6c7735c598b64a5fcfca9285b54b7f864c3" }

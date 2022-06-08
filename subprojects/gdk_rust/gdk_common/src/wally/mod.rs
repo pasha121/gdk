@@ -228,8 +228,10 @@ mod tests {
         let xpub = bitcoin::util::bip32::ExtendedPubKey::from_str("tpubD6NzVbkrYhZ4XYa9MoLt4BiMZ4gkt2faZ4BcmKu2a9te4LDpQmvEz2L2yDERivHxFPnxXXhqDRkUNnQCpZggCyEZLBktV7VaSmwayqMJy1s").unwrap();
         let password = xpub.encode().to_vec();
         let salt = "testnet".as_bytes().to_vec();
+        assert_eq!(bitcoin::Network::Testnet.to_string().as_bytes(), salt);
         let cost = 2048;
         let bytes = pbkdf2_hmac_sha512_256(password, salt, cost);
+
         assert_eq!(
             bytes.to_hex(),
             "657a9de33d1f7753edbb86c90b0ba064bd1b986570f1a5019ed80459877b013b"

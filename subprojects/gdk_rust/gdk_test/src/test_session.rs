@@ -13,7 +13,6 @@ use tempfile::TempDir;
 
 use gdk_common::be::*;
 use gdk_common::model::*;
-use gdk_common::session::Session;
 use gdk_common::{ElementsNetwork, NetworkId, NetworkParameters, State};
 use gdk_electrum::error::Error;
 use gdk_electrum::spv;

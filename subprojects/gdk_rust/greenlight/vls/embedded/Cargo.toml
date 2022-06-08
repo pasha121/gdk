@@ -1,0 +1,41 @@
+[package]
+authors = ["Dev Random <c1.devrandom@niftybox.net>"]
+edition = "2018"
+readme = "README.md"
+name = "embedded"
+version = "0.1.0"
+
+[features]
+default = ["device"]
+# note that the lightning-signer-core/secp-lowmemory feature reduces memory, but is not nearly as effective as the
+# static precomputation implementation below
+device = ["cortex-m", "cortex-m-rt", "cortex-m-semihosting", "alloc-cortex-m", "lightning-signer-core/no-std", "lightning-signer-core/secp-lowmemory"]
+std = ["lightning-signer-core/std"]
+
+[dependencies]
+cortex-m = { version = "0.6.0", optional = true }
+cortex-m-rt = { version = "0.6.10", optional = true }
+cortex-m-semihosting = { version = "0.3.3", optional = true }
+alloc-cortex-m = { version = "0.4.1", optional = true }
+
+lightning-signer-core = { path = "../lightning-signer-core", default-features = false }
+vls-persist = { path = "../vls-persist", default-features = false, features = ["no-std"] }
+
+[[bin]]
+name = "embedded"
+test = false
+bench = false
+
+[profile.release]
+codegen-units = 1 # better optimizations
+debug = true # symbols are nice and they don't increase the size on Flash
+# the above statement is almost true - some debug code gets pulled in - about 4 KB
+opt-level = "z" # reduce flash size
+lto = true # reduce flash size
+
+[profile.dev]
+opt-level = "z" # reduce flash size
+lto = true # reduce flash size
+
+[profile.test]
+lto = false # workaround LLVM bug

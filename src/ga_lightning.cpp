@@ -55,26 +55,22 @@ namespace sdk {
 
     void ga_lightning::set_local_encryption_keys(const pub_key_t& /*public_key*/, std::shared_ptr<signer> signer)
     {
-        throw std::runtime_error("set_local_encryption_keys not implemented");
+        rust_call("internal_set_local_encryption_keys", { { "xpub", signer->get_master_bip32_xpub() } }, m_session);
     }
 
     void ga_lightning::start_sync_threads() { throw std::runtime_error("start_sync_threads not implemented"); }
 
-    std::string ga_lightning::get_challenge(const pub_key_t& /*public_key*/)
-    {
-        throw std::runtime_error("get_challenge not implemented");
-    }
+    std::string ga_lightning::get_challenge(const pub_key_t& /*public_key*/) { return ""; }
 
     nlohmann::json ga_lightning::authenticate(const std::string& /*sig_der_hex*/, const std::string& /*path_hex*/,
         const std::string& /*root_bip32_xpub*/, std::shared_ptr<signer> signer)
     {
-        throw std::runtime_error("authenticate not implemented");
+        return rust_call("internal_authenticate", signer->get_credentials(), m_session);
     }
 
     void ga_lightning::register_subaccount_xpubs(
         const std::vector<uint32_t>& pointers, const std::vector<std::string>& bip32_xpubs)
     {
-        throw std::runtime_error("not implemented");
     }
 
     nlohmann::json ga_lightning::login(std::shared_ptr<signer> signer)
@@ -156,21 +152,18 @@ namespace sdk {
         throw std::runtime_error("get_previous_addresses not implemented");
     }
 
-    nlohmann::json ga_lightning::get_subaccounts() { throw std::runtime_error("get_subaccounts not implemented"); }
+    nlohmann::json ga_lightning::get_subaccounts() { return nlohmann::json(); }
 
-    std::vector<uint32_t> ga_lightning::get_subaccount_pointers()
-    {
-        throw std::runtime_error("get_subaccounts not implemented");
-    }
+    std::vector<uint32_t> ga_lightning::get_subaccount_pointers() { return std::vector<uint32_t>(); }
 
     nlohmann::json ga_lightning::get_subaccount(uint32_t subaccount)
     {
-        throw std::runtime_error("get_subaccounts not implemented");
+        throw std::runtime_error("get_subaccount not implemented");
     }
 
     void ga_lightning::rename_subaccount(uint32_t subaccount, const std::string& new_name)
     {
-        throw std::runtime_error("get_subaccounts not implemented");
+        throw std::runtime_error("rename_subaccount not implemented");
     }
 
     void ga_lightning::set_subaccount_hidden(uint32_t subaccount, bool is_hidden)

@@ -1,0 +1,23 @@
+[workspace]
+
+members = [
+    "lightning-signer-core",
+    "lightning-signer-server",
+    "vls-frontend",
+    "bitcoind-client",
+
+    "bolt-derive",
+    "vls-persist",
+    "vls-protocol",
+    "vls-protocol-client",
+    "vls-protocol-signer",
+    "vls-proxy",
+    "vlsd",
+]
+
+exclude = [
+    "vls-signer-stm32",
+    "embedded",
+    "wasm",
+    "lightning-storage-server",
+]

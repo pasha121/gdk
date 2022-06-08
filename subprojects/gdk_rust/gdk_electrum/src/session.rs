@@ -8,7 +8,7 @@ use gdk_common::{
     exchange_rates::{ExchangeRatesCache, ExchangeRatesCacher},
     model::*,
     notification::NativeNotif,
-    session::{JsonError, Session},
+    session::{JsonError, NewSession, Session},
     NetworkParameters,
 };
 use serde_json::Value;
@@ -25,8 +25,8 @@ impl ExchangeRatesCacher for ElectrumSession {
     }
 }
 
-impl Session for ElectrumSession {
-    fn new(network_parameters: NetworkParameters) -> Result<Self, JsonError> {
+impl ElectrumSession {
+    pub fn new(network_parameters: NetworkParameters) -> Result<Self, Error> {
         let url = determine_electrum_url(&network_parameters)?;
 
         Ok(Self {
@@ -46,7 +46,15 @@ impl Session for ElectrumSession {
             xr_cache: ExchangeRatesCache::new(),
         })
     }
+}
 
+impl NewSession for ElectrumSession {
+    fn new_session(network_parameters: NetworkParameters) -> Result<Box<dyn Session>, JsonError> {
+        Ok(Box::new(ElectrumSession::new(network_parameters)?))
+    }
+}
+
+impl Session for ElectrumSession {
     fn native_notification(&mut self) -> &mut NativeNotif {
         &mut self.notify
     }

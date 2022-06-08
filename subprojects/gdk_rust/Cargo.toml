@@ -3,11 +3,12 @@
 members = [
     "gdk_common",
     "gdk_electrum",
+    "gdk_greenlight",
     "gdk_registry",
     "gdk_rust",
 ]
 
-exclude = [ "gdk_test" ]
+exclude = [ "gdk_test", "greenlight" ]
 
 [profile.release]
 lto = true

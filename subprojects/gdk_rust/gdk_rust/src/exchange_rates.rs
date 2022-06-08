@@ -15,7 +15,7 @@ pub(crate) enum ExchangeRateSource {
 }
 
 // TODO: change name?
-pub(crate) fn fetch_cached<S: Session>(
+pub(crate) fn fetch_cached<S: Session + ?Sized>(
     sess: &mut S,
     params: ConvertAmountParams,
 ) -> Result<(Ticker, ExchangeRateSource), Error> {
@@ -113,10 +113,6 @@ mod tests {
     }
 
     impl Session for TestSession {
-        fn new(_: NetworkParameters) -> Result<Self, gdk_common::session::JsonError> {
-            todo!()
-        }
-
         fn handle_call(
             &mut self,
             _: &str,

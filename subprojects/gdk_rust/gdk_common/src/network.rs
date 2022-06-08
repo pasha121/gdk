@@ -53,6 +53,12 @@ pub struct NetworkParameters {
     /// if on the same network, share the same headers chain file but it's
     /// required to use a single process.
     pub state_dir: String,
+
+    /// Greenlight
+    pub greenlight_url: String,
+    pub nobody_crt: Vec<u8>,
+    pub nobody_key: Vec<u8>,
+    pub ca_crt: Vec<u8>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -181,6 +187,18 @@ impl NetworkParameters {
             bitcoin::network::constants::Network::Bitcoin
         } else {
             bitcoin::network::constants::Network::Testnet
+        }
+    }
+
+    pub fn network(&self) -> bitcoin::network::constants::Network {
+        if self.mainnet {
+            bitcoin::network::constants::Network::Bitcoin
+        } else {
+            if self.development {
+                bitcoin::network::constants::Network::Regtest
+            } else {
+                bitcoin::network::constants::Network::Testnet
+            }
         }
     }
 }
