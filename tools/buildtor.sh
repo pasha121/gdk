@@ -49,6 +49,7 @@ elif [ \( "$1" = "--windows" \) ]; then
     $SED -i "754a TOR_LIB_CRYPT32=-lcrypt32" configure.ac
     $SED -i "755s!^TOR_LIB.*!  TOR_LIB_CRYPT32=-lcrypt32!" configure.ac
     $SED -i "763a AC_SUBST(TOR_LIB_CRYPT32)" configure.ac
+    $SED -i "781s!^TOR_SEARCH.*!TOR_SEARCH_LIBRARY(libevent, \$trylibeventdir, \[-levent \$STATIC_LIBEVENT_FLAGS \$TOR_LIB_WS32 \$TOR_LIB_IPHLPAPI\], [!"  configure.ac
     $SED -i "912s!^TOR_SEARCH.*!TOR_SEARCH_LIBRARY(openssl, \$tryssldir, \[-lssl -lcrypto \$TOR_LIB_GDI \$TOR_LIB_WS32 \$TOR_LIB_CRYPT32\],!" configure.ac
     $SED -i "944s!^LIBS=.*!LIBS=\"\$TOR_OPENSSL_LIBS \$LIBS \$TOR_LIB_IPHLPAPI \$TOR_LIB_WS32 \$TOR_LIB_CRYPT32\"!" configure.ac
     $SED -i "1155s!^all_libs_for_check=.*!all_libs_for_check=\"\$TOR_ZLIB_LIBS \$TOR_LIB_MATH \$TOR_LIBEVENT_LIBS \$TOR_OPENSSL_LIBS \$TOR_SYSTEMD_LIBS \$TOR_LIB_WS32 \$TOR_LIB_CRYPT32 \$TOR_LIB_GDI \$TOR_LIB_USERENV \$TOR_CAP_LIBS\"!" configure.ac
