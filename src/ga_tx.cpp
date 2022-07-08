@@ -593,11 +593,16 @@ namespace sdk {
                 // TODO: filter per asset or assume always single asset
                 if (manual_selection) {
                     // Add all selected utxos
-                    for (auto& utxo : result.at("used_utxos")) {
-                        v = add_utxo(session, tx, utxo);
-                        available_total += v;
-                        total += v;
-                        current_used_utxos.emplace_back(utxo);
+                    const auto asset_utxos_p = utxos.find(asset_id);
+                    if (asset_utxos_p == utxos.end()) {
+                        set_tx_error(result, res::id_insufficient_funds); // Insufficient funds
+                    } else {
+                        for (auto& utxo : utxos.at(asset_id)) {
+                            v = add_utxo(session, tx, utxo);
+                            available_total += v;
+                            total += v;
+                            current_used_utxos.emplace_back(utxo);
+                        }
                     }
                 } else {
                     // Collect utxos in order until we have covered the amount to send
