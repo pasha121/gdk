@@ -764,6 +764,13 @@ namespace sdk {
         return get_wallet_hash_ids(np, chain_code_hex, public_key_hex);
     }
 
+    nlohmann::json validate_address(const network_parameters& net_params, const nlohmann::json& details)
+    {
+        nlohmann::json validate_details = details;
+        validate_details["net_params"] = net_params.get_json();
+        return rust_call("validate_address", validate_details);
+    }
+
     bool nsee_log_info(std::string message, const char* context)
     {
         try {

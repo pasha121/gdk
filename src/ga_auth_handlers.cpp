@@ -1906,5 +1906,20 @@ namespace sdk {
         m_result = m_session->decrypt_with_pin(m_details);
         return state_type::done;
     }
+
+    //
+    // Validate Address
+    //
+    validate_address_call::validate_address_call(session& session, const nlohmann::json& details)
+        : auth_handler_impl(session, "validate_address", std::shared_ptr<signer>())
+        , m_details(details)
+    {
+    }
+
+    auth_handler::state_type validate_address_call::call_impl()
+    {
+        m_result = validate_address(m_net_params, m_details);
+        return state_type::done;
+    }
 } // namespace sdk
 } // namespace ga

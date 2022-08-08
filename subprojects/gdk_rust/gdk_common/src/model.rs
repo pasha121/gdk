@@ -1060,6 +1060,23 @@ impl PsbtGetDetailsOut {
     }
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ValidateAddressParams {
+    /// The address string to validate
+    pub address: String,
+
+    /// The network parameters
+    pub net_params: crate::network::NetworkParameters,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ValidateAddressResult {
+    pub is_valid: bool,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+}
+
 #[cfg(test)]
 mod test {
     use crate::model::{parse_path, CreateTxUtxos, GetUnspentOutputs};

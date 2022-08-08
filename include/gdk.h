@@ -925,6 +925,17 @@ GDK_API int GA_generate_mnemonic_12(char** output);
 GDK_API int GA_validate_mnemonic(const char* mnemonic, uint32_t* valid);
 
 /**
+ * Validate an address.
+ *
+ * :param session: The session to use.
+ * :param details: Details of the address to validate :ref:`validate-address-details`
+ * :param call: Destination for the resulting GA_auth_handler to perform the validation.
+ *|     The call handlers result is :ref:`validate-address-result`.
+ *|     Returned GA_auth_handler should be freed using `GA_destroy_auth_handler`.
+ */
+GDK_API int GA_validate_address(struct GA_session* session, const GA_json* details, struct GA_auth_handler** call);
+
+/**
  * Register a network configuration
  *
  * :param name: The name of the network to register

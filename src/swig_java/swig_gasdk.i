@@ -556,6 +556,7 @@ LOCALFUNC jbyteArray create_array(JNIEnv *jenv, const unsigned char* p, size_t l
 %returns_struct(GA_get_settings, GA_json)
 %returns_void__(GA_auth_handler_request_code)
 %returns_void__(GA_auth_handler_resolve_code)
+%returns_struct(GA_validate_address, GA_auth_handler)
 %returns_uint32(GA_validate_mnemonic)
 
 %returns_struct(GA_gl_call, GA_json)

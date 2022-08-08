@@ -150,6 +150,9 @@ namespace sdk {
     // Merge a transaction in a PSBT or PSET
     std::string psbt_merge_tx(const std::string& psbt, const std::string& tx_hex);
 
+    // Validate an address
+    nlohmann::json validate_address(const network_parameters& net_params, const nlohmann::json& details);
+
     std::string gdb_dump_json(const nlohmann::json& json);
 
     // Check if str represents a valid utf-8 string

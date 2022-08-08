@@ -304,6 +304,9 @@ class Session(object):
     def get_assets(self, params):
         return json.loads(get_assets(self.session_obj, self._to_json(params)))
 
+    def validate_address(self, details):
+        return Call(validate_address(self.session_obj, self._to_json(details)))
+
     def validate_asset_domain_name(self, params):
         return json.loads(validate_asset_domain_name(self.session_obj, self._to_json(params)))
 

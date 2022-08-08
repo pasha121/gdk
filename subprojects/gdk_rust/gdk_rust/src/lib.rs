@@ -16,7 +16,10 @@ use std::str::FromStr;
 use std::sync::Once;
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
-use gdk_common::model::{InitParam, SPVDownloadHeadersParams, SPVVerifyTxParams};
+use gdk_common::be::validate_address;
+use gdk_common::model::{
+    InitParam, SPVDownloadHeadersParams, SPVVerifyTxParams, ValidateAddressParams,
+};
 
 use crate::error::Error;
 use gdk_common::exchange_rates::{ExchangeRatesCache, ExchangeRatesCacher};
@@ -376,6 +379,10 @@ fn handle_call(method: &str, input: &str) -> Result<String, Error> {
         "get_assets" => {
             let params: gdk_registry::GetAssetsParams = serde_json::from_str(input)?;
             to_string(&gdk_registry::get_assets(params)?)
+        }
+        "validate_address" => {
+            let param: ValidateAddressParams = serde_json::from_str(input)?;
+            to_string(&validate_address(&param))
         }
 
         _ => {

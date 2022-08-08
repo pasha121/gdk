@@ -1844,3 +1844,28 @@ Parameters controlling the `GA_get_subaccounts` call.
    }
 
 :refresh: If set to ``true``, subaccounts are re-discovered if appropriate for the session type. Note that this will take significantly more time if set. Defaults to ``false``.
+
+
+.. _validate-address-details:
+
+Validate Address details JSON
+-----------------------------
+
+.. code-block:: json
+
+   {
+      "address": "...",
+   }
+
+
+.. _validate-address-result:
+
+Validate Address result JSON
+-----------------------------
+
+.. code-block:: json
+
+   {
+      "is_valid": true,
+      "error": "",
+   }
