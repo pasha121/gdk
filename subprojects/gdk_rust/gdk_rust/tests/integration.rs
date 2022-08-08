@@ -255,7 +255,7 @@ fn create_tx_err(is_liquid: bool) {
     );
     assert!(matches!(
         test_session.session.create_transaction(&mut create_opt),
-        Err(Error::InvalidAddress)
+        Err(Error::Common(gdk_common::Error::InvalidAddress))
     ));
 
     // Wrong networks
@@ -276,7 +276,7 @@ fn create_tx_err(is_liquid: bool) {
     );
     assert!(matches!(
         test_session.session.create_transaction(&mut create_opt),
-        Err(Error::InvalidAddress)
+        Err(Error::Common(gdk_common::Error::InvalidAddress))
     ));
 
     let mainnet_addr = if is_liquid {
@@ -294,7 +294,7 @@ fn create_tx_err(is_liquid: bool) {
     );
     assert!(matches!(
         test_session.session.create_transaction(&mut create_opt),
-        Err(Error::InvalidAddress)
+        Err(Error::Common(gdk_common::Error::InvalidAddress))
     ));
 
     // Segwitv1 and b(l)ech32
@@ -313,7 +313,7 @@ fn create_tx_err(is_liquid: bool) {
     );
     assert!(matches!(
         test_session.session.create_transaction(&mut create_opt),
-        Err(Error::InvalidAddress)
+        Err(Error::Common(gdk_common::Error::InvalidAddress))
     ));
 
     // Segwitv1 and b(l)ech32m
@@ -350,7 +350,7 @@ fn create_tx_err(is_liquid: bool) {
 
     assert!(matches!(
         test_session.session.create_transaction(&mut create_opt),
-        Err(Error::InvalidAddress)
+        Err(Error::Common(gdk_common::Error::InvalidAddress))
     ));
 
     // Segwitv2 and b(l)ech32m
@@ -370,7 +370,7 @@ fn create_tx_err(is_liquid: bool) {
 
     assert!(matches!(
         test_session.session.create_transaction(&mut create_opt),
-        Err(Error::InvalidAddress)
+        Err(Error::Common(gdk_common::Error::InvalidAddress))
     ));
 
     if is_liquid {
@@ -386,7 +386,7 @@ fn create_tx_err(is_liquid: bool) {
         );
         assert!(matches!(
             test_session.session.create_transaction(&mut create_opt),
-            Err(Error::NonConfidentialAddress)
+            Err(Error::Common(gdk_common::Error::NonConfidentialAddress))
         ));
 
         // Missing asset_id

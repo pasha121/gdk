@@ -52,6 +52,9 @@ pub enum Error {
     #[error(transparent)]
     Io(#[from] std::io::Error),
 
+    #[error("non confidential address")]
+    NonConfidentialAddress,
+
     #[error("Unsupported sighash")]
     UnsupportedSigHash,
 

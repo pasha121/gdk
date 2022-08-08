@@ -1,7 +1,6 @@
 use std::cmp::Ordering;
 use std::collections::HashSet;
 use std::convert::TryInto;
-use std::str::FromStr;
 
 use bitcoin::util::sighash::SighashCache;
 use log::{info, warn};
@@ -10,7 +9,6 @@ use bitcoin::blockdata::script;
 use bitcoin::hashes::hex::{FromHex, ToHex};
 use bitcoin::hashes::Hash;
 use bitcoin::secp256k1::{self, Message};
-use bitcoin::util::address::Payload;
 use bitcoin::util::bip32::{ChildNumber, DerivationPath, ExtendedPrivKey, ExtendedPubKey};
 use bitcoin::{PublicKey, Witness};
 use elements::confidential::Value;
@@ -1041,61 +1039,9 @@ pub fn create_tx(
     // TODO put checks into CreateTransaction::validate
     // eagerly check for address validity
     for addressee in request.addressees.iter() {
-        match network.id() {
-            NetworkId::Bitcoin(network) => {
-                if let Ok(address) = bitcoin::Address::from_str(&addressee.address) {
-                    info!("address.network:{} network:{}", address.network, network);
-                    if address.network == network
-                        || (address.network == bitcoin::Network::Testnet
-                            && network == bitcoin::Network::Regtest)
-                    {
-                        // FIXME: use address.is_standard() once rust-bitcoin has P2tr variant
-                        if let Payload::WitnessProgram {
-                            version: v,
-                            program: p,
-                        } = &address.payload
-                        {
-                            // Do not support segwit greater than v1 and non-P2TR v1
-                            if v.into_num() > 1 || (v.into_num() == 1 && p.len() != 32) {
-                                return Err(Error::InvalidAddress);
-                            }
-                        }
-                        continue;
-                    }
-                }
-                return Err(Error::InvalidAddress);
-            }
-            NetworkId::Elements(network) => {
-                if let Ok(address) = elements::Address::parse_with_params(
-                    &addressee.address,
-                    network.address_params(),
-                ) {
-                    if !address.is_blinded() {
-                        return Err(Error::NonConfidentialAddress);
-                    }
-                    if let elements::address::Payload::WitnessProgram {
-                        version: v,
-                        program: p,
-                    } = &address.payload
-                    {
-                        // Do not support segwit greater than v1 and non-P2TR v1
-                        if v.to_u8() > 1 || (v.to_u8() == 1 && p.len() != 32) {
-                            return Err(Error::InvalidAddress);
-                        }
-                    }
-                } else {
-                    return Err(Error::InvalidAddress);
-                }
-                if let Some(Ok(_)) = addressee
-                    .asset_id
-                    .as_ref()
-                    .map(|asset_id| elements::issuance::AssetId::from_str(&asset_id))
-                {
-                    // non-empty and valid asset id
-                } else {
-                    return Err(Error::InvalidAssetId);
-                }
-            }
+        BEAddress::from_str(&addressee.address, network.id())?;
+        if network.liquid && addressee.asset_id().is_none() {
+            return Err(Error::InvalidAssetId);
         }
     }
 
@@ -1525,6 +1471,7 @@ fn blind_tx(account: &Account, tx: &elements::Transaction) -> Result<elements::T
 #[cfg(test)]
 mod test {
     use super::*;
+    use std::str::FromStr;
 
     const NETWORK: NetworkId = NetworkId::Bitcoin(bitcoin::Network::Regtest);
 

@@ -251,8 +251,10 @@ impl Error {
         use super::Error::*;
         match *self {
             InsufficientFunds => "id_insufficient_funds",
-            InvalidAddress => "id_invalid_address",
-            NonConfidentialAddress => "id_nonconfidential_addresses_not",
+            InvalidAddress | Common(CommonError::InvalidAddress) => "id_invalid_address",
+            NonConfidentialAddress | Common(CommonError::NonConfidentialAddress) => {
+                "id_nonconfidential_addresses_not"
+            }
             InvalidAmount => "id_invalid_amount",
             InvalidAssetId => "id_invalid_asset_id",
             FeeRateBelowMinimum(_) => "id_fee_rate_is_below_minimum",
