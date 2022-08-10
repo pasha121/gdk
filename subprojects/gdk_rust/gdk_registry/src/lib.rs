@@ -465,5 +465,25 @@ mod tests {
             let asset_id = AssetId::from_hex("ce091c998b83c78bb71a632313ba3760f1763d9cfcffae02258ffa9865a37bd2").unwrap();
             assert_ne!(icons.get(&asset_id), new_icons.get(&asset_id), "non hard coded icon should get updated");
         }
+
+        /// Added to test [this] comment.
+        ///
+        /// [this]: https://gl.blockstream.io/blockstream/green/gdk/-/issues/714#note_267821
+        #[test]
+        fn test_refresh_assets_icons() {
+            let _ = env_logger::try_init();
+
+            let temp_dir = TempDir::new().unwrap();
+            info!("{:?}", temp_dir);
+            init(&temp_dir).unwrap();
+
+            let res = refresh_assets(true, true, false).unwrap();
+            assert!(res.assets.len() > 0);
+            assert_eq!(0, res.icons.len());
+
+            let res = refresh_assets(true, false, true).unwrap();
+            assert!(res.icons.len() > 0);
+            assert_eq!(0, res.assets.len());
+        }
     }
 }
