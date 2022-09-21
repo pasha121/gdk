@@ -1,5 +1,29 @@
 # Changelog
 
+## Release 0.0.57
+
+### Added
+
+- Documentation: Add initial documentation for `GA_create_transaction`.
+
+### Changed
+
+- GA_create_transaction: The multisig implementation is now shared with singlesig, so singlesig
+is more consistent with multisig. Users are advised to test their implementations to ensure that
+the more consistent behavour is well handled by their implementations.
+- GA_create_transaction: Missing amounts in addressees now always return "id_no_amount_specified"
+in the "error" field instead of "id_invalid_amount".
+- GA_create_transaction: L-BTC dust outputs can no longer be created under Liquid.
+- GA_create_transaction: Manual UTXO selection/coin control now takes inputs from "utxos"
+instead of "used_utxos". "used_utxos" should only be modified by callers in rare cases
+when calling `GA_sign_transaction`.
+- GA_create_transaction: Sweep and redeposit transactions must now provide an addressee to
+send to. Previously if one was not given, a new wallet address would be generated to send to.
+
+### Fixed
+
+- Fixed the default minimum fee for Liquid to be 0.1 L-SAT/vbyte
+
 ## Release 0.0.56
 
 ### Added
