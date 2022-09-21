@@ -268,12 +268,6 @@ namespace sdk {
         return get_wallet_hash_ids(m_net_params, master_chain_code_hex, master_pub_key_hex);
     }
 
-    nlohmann::json session_impl::login(std::shared_ptr<signer> /*signer*/)
-    {
-        GDK_RUNTIME_ASSERT(false); // Only used by rust until it supports HWW
-        return nlohmann::json();
-    }
-
     void session_impl::load_store(std::shared_ptr<signer> /*signer*/)
     {
         // Overriden for ga_rust
