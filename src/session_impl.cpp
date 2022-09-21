@@ -4,6 +4,7 @@
 #include "ga_rust.hpp"
 #include "ga_session.hpp"
 #include "ga_tor.hpp"
+#include "ga_tx.hpp"
 #include "http_client.hpp"
 #include "logging.hpp"
 #include "signer.hpp"
@@ -326,6 +327,15 @@ namespace sdk {
         }
     }
 
+    nlohmann::json session_impl::create_transaction(const nlohmann::json& details)
+    {
+        try {
+            return create_ga_transaction(*this, details);
+        } catch (const user_error& e) {
+            return nlohmann::json({ { "error", e.what() } });
+        }
+    }
+
     session_impl::utxo_cache_value_t session_impl::get_cached_utxos(uint32_t subaccount, uint32_t num_confs) const
     {
         locker_t locker(m_utxo_cache_mutex);
@@ -427,6 +437,7 @@ namespace sdk {
 
     std::vector<unsigned char> session_impl::output_script_from_utxo(const nlohmann::json& utxo)
     {
+        GDK_RUNTIME_ASSERT(m_net_params.is_electrum()); // Default impl is single sig
         const std::string addr_type = utxo.at("address_type");
         const auto pubkeys = pubkeys_from_utxo(utxo);
 
@@ -437,9 +448,11 @@ namespace sdk {
 
     std::vector<pub_key_t> session_impl::pubkeys_from_utxo(const nlohmann::json& utxo)
     {
+        GDK_RUNTIME_ASSERT(m_net_params.is_electrum()); // Default impl is single sig
         const uint32_t subaccount = utxo.at("subaccount");
         const uint32_t pointer = utxo.at("pointer");
         const bool is_internal = utxo.at("is_internal");
+
         locker_t locker(m_mutex);
         return std::vector<pub_key_t>({ get_user_pubkeys().derive(subaccount, pointer, is_internal) });
     }

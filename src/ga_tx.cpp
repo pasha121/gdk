@@ -437,8 +437,10 @@ namespace sdk {
                         utxo["txhash"] = b2h_rev(tx->inputs[i].txhash);
                         utxo["pt_idx"] = tx->inputs[i].index;
                         calculate_input_subtype(utxo, tx, i);
-                        const auto script = session.output_script_from_utxo(utxo);
-                        utxo["prevout_script"] = b2h(script);
+                        utxo["prevout_script"] = b2h(session.output_script_from_utxo(utxo));
+                        if (is_electrum) {
+                            utxo["public_key"] = b2h(session.pubkeys_from_utxo(utxo).at(0));
+                        }
                         used_utxos_map.emplace(i, utxo);
                     }
                     GDK_RUNTIME_ASSERT(used_utxos_map.size() == tx->num_inputs);

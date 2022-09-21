@@ -397,54 +397,10 @@ namespace sdk {
         }
     }
 
-    nlohmann::json ga_rust::create_transaction(const nlohmann::json& details)
-    {
-        GDK_LOG_SEV(log_level::debug) << "ga_rust::create_transaction:" << details.dump();
-        nlohmann::json result(details);
-
-        auto addressees_p = result.find("addressees");
-        if (addressees_p != result.end()) {
-            for (auto& addressee : *addressees_p) {
-                // TODO: unify handling with add_tx_addressee
-                nlohmann::json uri_params;
-                try {
-                    uri_params = parse_bitcoin_uri(addressee.at("address"), m_net_params.bip21_prefix());
-                } catch (const std::exception& e) {
-                    result["error"] = e.what();
-                    return result;
-                }
-                if (!uri_params.is_null()) {
-                    addressee["address"] = uri_params["address"];
-                    const auto& bip21_params = uri_params["bip21-params"];
-                    addressee["bip21-params"] = bip21_params;
-                    const auto uri_amount_p = bip21_params.find("amount");
-                    if (uri_amount_p != bip21_params.end()) {
-                        // Use the amount specified in the URI
-                        const nlohmann::json uri_amount = { { "btc", uri_amount_p->get<std::string>() } };
-                        addressee["satoshi"] = amount::convert(uri_amount, "", "")["satoshi"];
-                    }
-                    if (m_net_params.is_liquid()) {
-                        if (bip21_params.contains("amount") && !bip21_params.contains("assetid")) {
-                            result["error"] = res::id_invalid_payment_request_assetid;
-                            return result;
-                        } else if (bip21_params.contains("assetid")) {
-                            addressee["asset_id"] = bip21_params["assetid"];
-                        }
-                    }
-                }
-                if (!addressee.contains("satoshi")) {
-                    result["error"] = res::id_no_amount_specified;
-                    return result;
-                }
-            }
-        }
-        GDK_LOG_SEV(log_level::debug) << "ga_rust::create_transaction result: " << result.dump();
-
-        return rust_call("create_transaction", result, m_session);
-    }
-
     nlohmann::json ga_rust::user_sign_transaction(const nlohmann::json& details)
     {
+        // Only used for sweeping, which isn't implemented for singlesig
+        // FIXME: remove/use the common signing code
         return rust_call("sign_transaction", details, m_session);
     }
 
@@ -466,7 +422,13 @@ namespace sdk {
 
     nlohmann::json ga_rust::send_transaction(const nlohmann::json& details, const nlohmann::json& twofactor_data)
     {
-        return rust_call("send_transaction", details, m_session);
+        auto txhash_hex = broadcast_transaction(details.at("transaction"));
+        auto result = details;
+        if (details.contains("memo")) {
+            set_transaction_memo(txhash_hex, details.at("memo"));
+        }
+        result["txhash"] = std::move(txhash_hex);
+        return result;
     }
 
     std::string ga_rust::broadcast_transaction(const std::string& tx_hex)
