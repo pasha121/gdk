@@ -1142,6 +1142,24 @@ impl ElectrumSession {
             ));
         }
 
+        let pset = {
+            let pset_bytes = base64::decode(&opt.psbt)?;
+            encode::deserialize::<PartiallySignedTransaction>(&pset_bytes)?
+        };
+
+        let is_pset_input = |utxo: &UnspentOutput| {
+            pset.inputs()
+                .iter()
+                .find(|input| {
+                    input.previous_txid.to_string() == utxo.txhash
+                        && input.previous_output_index == utxo.pt_idx
+                })
+                .is_some()
+        };
+
+        // Filter out the UTXOs that are not inputs of the PSBT/PSET.
+        opt.utxos.retain(is_pset_input);
+
         todo!()
     }
 }
