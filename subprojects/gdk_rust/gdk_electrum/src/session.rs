@@ -92,6 +92,10 @@ impl Session for ElectrumSession {
                 let opt: GetNextAccountOpt = serde_json::from_value(input)?;
                 self.get_next_subaccount(opt).to_json()
             }
+            "psbt_sign" => {
+                let opt: PsbtSignOpt = serde_json::from_value(input)?;
+                self.psbt_sign(opt).to_json()
+            }
             "rename_subaccount" => {
                 let opt: RenameAccountOpt = serde_json::from_value(input)?;
                 self.rename_subaccount(opt).to_json()

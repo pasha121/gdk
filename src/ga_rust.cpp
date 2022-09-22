@@ -467,7 +467,7 @@ namespace sdk {
 
     nlohmann::json ga_rust::psbt_sign(const nlohmann::json& details)
     {
-        throw std::runtime_error("psbt_sign not implemented");
+        return rust_call("psbt_sign", details, m_session);
     }
 
     nlohmann::json ga_rust::send_transaction(const nlohmann::json& details, const nlohmann::json& twofactor_data)

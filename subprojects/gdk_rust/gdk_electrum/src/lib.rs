@@ -1134,6 +1134,16 @@ impl ElectrumSession {
         info!("txs status={}", status);
         Ok(status)
     }
+
+    pub fn psbt_sign(&self, mut opt: PsbtSignOpt) -> Result<PsbtSignOpt, Error> {
+        if !self.network.liquid {
+            return Err(Error::Generic(
+                "`ElectrumSession::psbt_sign` is currently only supported for Liquid".to_owned(),
+            ));
+        }
+
+        todo!()
+    }
 }
 
 pub fn keys_from_credentials(

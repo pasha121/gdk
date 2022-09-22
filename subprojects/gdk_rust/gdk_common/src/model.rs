@@ -1060,6 +1060,17 @@ impl PsbtGetDetailsOut {
     }
 }
 
+/// Parameters passed to and returned from `gdk_electrum::ElectrumSession::psbt_sign`.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PsbtSignOpt {
+    /// The PSBT or PSET in base64 format.
+    pub psbt: String,
+
+    /// The list of UTXOs that should be signed. Can also contain UTXOs that
+    /// are not inputs of the PSBT/PSET.
+    pub utxos: Vec<UnspentOutput>,
+}
+
 #[cfg(test)]
 mod test {
     use crate::model::{parse_path, CreateTxUtxos, GetUnspentOutputs};
