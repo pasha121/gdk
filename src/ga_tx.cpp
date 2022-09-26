@@ -526,7 +526,15 @@ namespace sdk {
             // Let the caller know if addressees should not be modified
             result["addressees_read_only"] = is_redeposit || is_rbf || is_cpfp || is_sweep;
 
+            // We must have addressees to send to, and if sending everything, only one
+            size_t num_addressees = 0;
             auto addressees_p = result.find("addressees");
+            if (addressees_p == result.end() || addressees_p->empty()) {
+                set_tx_error(result, res::id_no_recipients); // No outputs
+            } else {
+                num_addressees = addressees_p->size();
+            }
+
             if (is_sweep) {
                 if (is_liquid) {
                     set_tx_error(result, "sweep not supported for liquid");
@@ -554,11 +562,9 @@ namespace sdk {
                     result["utxos"][policy_asset] = std::move(sweep_utxos);
                 }
                 result["send_all"] = true;
-                if (addressees_p != result.end()) {
-                    // Use the provided address
-                    GDK_RUNTIME_ASSERT(addressees_p->size() == 1u);
-                    addressees_p->at(0)["satoshi"] = 0;
-                }
+                // Use the provided address
+                GDK_RUNTIME_ASSERT(num_addressees == 1u);
+                addressees_p->at(0)["satoshi"] = 0;
             }
 
             const bool send_all = json_add_if_missing(result, "send_all", false);
@@ -572,16 +578,6 @@ namespace sdk {
             GDK_RUNTIME_ASSERT(strategy == UTXO_SEL_DEFAULT || manual_selection);
             // We will recompute the used utxos
             result.erase("used_utxos");
-
-            // We must have addressees to send to, and if sending everything, only one
-            // Note that this error is set unconditionally and so overrides any others,
-            // Since addressing transactions is normally done first by users
-            size_t num_addressees = 0;
-            if (addressees_p == result.end() || addressees_p->empty()) {
-                set_tx_error(result, res::id_no_recipients); // No outputs
-            } else {
-                num_addressees = addressees_p->size();
-            }
 
             // Send all should not be visible/set when RBFing
             GDK_RUNTIME_ASSERT(!is_rbf || (!send_all || is_redeposit));
@@ -605,16 +601,14 @@ namespace sdk {
 
             std::set<std::string> asset_ids;
             bool have_assets = json_get_value(result, "addressees_have_assets", false);
-            if (num_addressees) {
-                for (auto& addressee : *addressees_p) {
-                    const std::string asset_id_hex = validate_tx_addressee(net_params, result, addressee);
-                    if (!json_get_value(result, "error").empty()) {
-                        // FIXME: should probably either exit early or continue
-                        // and not overwrite error here
-                        break;
-                    }
-                    asset_ids.insert(asset_id_hex);
+            for (auto& addressee : *addressees_p) {
+                const std::string asset_id_hex = validate_tx_addressee(net_params, result, addressee);
+                if (!json_get_value(result, "error").empty()) {
+                    // FIXME: should probably either exit early or continue
+                    // and not overwrite error here
+                    break;
                 }
+                asset_ids.insert(asset_id_hex);
             }
 
             if (is_liquid) {
@@ -626,7 +620,7 @@ namespace sdk {
             }
             result["addressees_have_assets"] = have_assets;
 
-            std::vector<nlohmann::json> reordered_addressees;
+            nlohmann::json::array_t reordered_addressees;
 
             auto create_tx_outputs = [&](const std::string& asset_id) {
                 const bool include_fee = asset_id == policy_asset && !is_partial;
@@ -648,23 +642,21 @@ namespace sdk {
                 // Add all outputs and compute the total amount of satoshi to be sent
                 amount required_total{ 0 };
 
-                if (num_addressees) {
-                    for (auto& addressee : *addressees_p) {
-                        if (asset_id_from_json(net_params, addressee) != asset_id) {
-                            continue; // Ignore unrelated assets
-                        }
-                        required_total += add_tx_addressee(session, result, tx, addressee, asset_id);
-                        reordered_addressees.push_back(addressee);
-                        if (addressee.contains("index") && result.contains("change_index")) {
-                            // If addressee has an index, we are inserting the addressee in the
-                            // transaction at that index, thus change indexes after the index must
-                            // be incremented.
-                            const auto index = addressee.at("index");
-                            auto& change_indexes = result.at("change_index");
-                            for (auto it = change_indexes.begin(); it != change_indexes.end(); ++it) {
-                                if (*it >= index) {
-                                    *it = static_cast<uint32_t>(*it) + 1;
-                                }
+                for (auto& addressee : *addressees_p) {
+                    if (asset_id_from_json(net_params, addressee) != asset_id) {
+                        continue; // Ignore unrelated assets
+                    }
+                    required_total += add_tx_addressee(session, result, tx, addressee, asset_id);
+                    reordered_addressees.push_back(addressee);
+                    if (addressee.contains("index") && result.contains("change_index")) {
+                        // If addressee has an index, we are inserting the addressee in the
+                        // transaction at that index, thus change indexes after the index must
+                        // be incremented.
+                        const auto index = addressee.at("index");
+                        auto& change_indexes = result.at("change_index");
+                        for (auto it = change_indexes.begin(); it != change_indexes.end(); ++it) {
+                            if (*it >= index) {
+                                *it = static_cast<uint32_t>(*it) + 1;
                             }
                         }
                     }
@@ -968,7 +960,7 @@ namespace sdk {
                 create_tx_outputs(policy_asset);
             }
 
-            result["addressees"] = reordered_addressees;
+            result["addressees"] = std::move(reordered_addressees);
 
             if (used_utxos.size() > 1u && json_get_value(result, "randomize_inputs", true)) {
                 randomise_inputs(tx, used_utxos);
