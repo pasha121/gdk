@@ -30,11 +30,7 @@ pub(crate) fn fetch_cached<S: Session>(
 
     let agent = sess.build_request_agent()?;
 
-    let ticker = if sess.is_mainnet() {
-        self::fetch(&agent, pair, &params.url)?
-    } else {
-        Ticker::new(pair, 1.1)
-    };
+    let ticker = self::fetch(&agent, pair, &params.url)?;
 
     sess.cache_ticker(ticker);
 
@@ -160,5 +156,18 @@ mod tests {
         let res = fetch_cached(&mut session, params);
         assert!(res.is_ok(), "{:?}", res);
         assert_eq!(ExchangeRateSource::Cached, res.unwrap().1);
+    }
+
+    #[test]
+    fn testnet_fixed_exchange_rate() {
+        let mut session = TestSession::default();
+
+        let params = ConvertAmountParams {
+            currency: Currency::USD,
+            url: "https://raw.githubusercontent.com/Blockstream/gdk/914bb2c9230e7b47ad04380b88bbcd228799b26f".into(),
+        };
+
+        let (ticker, _) = fetch_cached(&mut session, params.clone()).unwrap();
+        assert_eq!(ticker.rate, 1.1);
     }
 }
