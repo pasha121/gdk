@@ -56,9 +56,9 @@ pub struct NetworkParameters {
 
     /// Greenlight
     pub greenlight_url: String,
-    pub nobody_crt: Vec<u8>,
-    pub nobody_key: Vec<u8>,
-    pub ca_crt: Vec<u8>,
+    pub nobody_crt: String,
+    pub nobody_key: String,
+    pub ca_crt: String,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

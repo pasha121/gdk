@@ -70,3 +70,6 @@ rm -rf .git
 cd $PATH_TO_GDK_RUST
 mv /tmp/greenlight .
 ```
+
+Then remove the line with field `preimage` in `InvoiceRequest` in `gdk_rust/greenlight/libs/proto/greenlight.proto` and fix errors in `pb.rs`.
+Preimage field will become optional once migrated to glrpc

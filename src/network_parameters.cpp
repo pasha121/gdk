@@ -163,6 +163,86 @@ static std::vector<std::string> wamp_cert_pins = {
     "64e286b76063602a372efd60cde8db2656a49ee15e84254b3d6eb5fe38f4288b",
 };
 
+static std::string nobody_crt =
+R"(
+-----BEGIN CERTIFICATE-----
+MIICpzCCAk6gAwIBAgIUdSk1NrVicDLl62zNFJ6Re6Bc3wowCgYIKoZIzj0EAwIw
+gYMxCzAJBgNVBAYTAlVTMRMwEQYDVQQIEwpDYWxpZm9ybmlhMRYwFAYDVQQHEw1T
+YW4gRnJhbmNpc2NvMRQwEgYDVQQKEwtCbG9ja3N0cmVhbTEdMBsGA1UECxMUQ2Vy
+dGlmaWNhdGVBdXRob3JpdHkxEjAQBgNVBAMTCUdMIC91c2VyczAeFw0yMTA0MjYx
+NzE0MDBaFw0zMTA0MjQxNzE0MDBaMIGKMQswCQYDVQQGEwJVUzETMBEGA1UECBMK
+Q2FsaWZvcm5pYTEWMBQGA1UEBxMNU2FuIEZyYW5jaXNjbzEUMBIGA1UEChMLQmxv
+Y2tzdHJlYW0xHTAbBgNVBAsTFENlcnRpZmljYXRlQXV0aG9yaXR5MRkwFwYDVQQD
+ExBHTCAvdXNlcnMvbm9ib2R5MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEsozl
+E1LGXLxtfc8Ljf7fQh2YBoTqQiYHGDL44xLG9ey8YZfTYulYA6nl1GjhYFMJA3sM
+mq5pdsmNaA7+gna8VaOBljCBkzAOBgNVHQ8BAf8EBAMCAaYwHQYDVR0lBBYwFAYI
+KwYBBQUHAwEGCCsGAQUFBwMCMAwGA1UdEwEB/wQCMAAwHQYDVR0OBBYEFK26BLJr
+2nWbiI3/bRnCc9YFXgnvMB8GA1UdIwQYMBaAFE0O9xdTDG6TosQbXT6KDyYGwyWU
+MBQGA1UdEQQNMAuCCWxvY2FsaG9zdDAKBggqhkjOPQQDAgNHADBEAiBo3/V5vjAf
+/y8PjUt1lEe2j4RiiJ2dcjMpj+05m2ZCSwIgHHCKetqUTLwWvukuGyXcDTxSqWSy
+QyMXXrntwWHuvpA=
+-----END CERTIFICATE-----
+-----BEGIN CERTIFICATE-----
+MIICijCCAjGgAwIBAgIUJ06syYB1TPRbSmTD4UCpT0PmA+UwCgYIKoZIzj0EAwIw
+fjELMAkGA1UEBhMCVVMxEzARBgNVBAgTCkNhbGlmb3JuaWExFjAUBgNVBAcTDVNh
+biBGcmFuY2lzY28xFDASBgNVBAoTC0Jsb2Nrc3RyZWFtMR0wGwYDVQQLExRDZXJ0
+aWZpY2F0ZUF1dGhvcml0eTENMAsGA1UEAxMER0wgLzAeFw0yMTA0MjYxNzE0MDBa
+Fw0zMTA0MjQxNzE0MDBaMIGDMQswCQYDVQQGEwJVUzETMBEGA1UECBMKQ2FsaWZv
+cm5pYTEWMBQGA1UEBxMNU2FuIEZyYW5jaXNjbzEUMBIGA1UEChMLQmxvY2tzdHJl
+YW0xHTAbBgNVBAsTFENlcnRpZmljYXRlQXV0aG9yaXR5MRIwEAYDVQQDEwlHTCAv
+dXNlcnMwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAATWlNi+9P8ZdRfaP1VOOMb9
+e+VSugDxwvN41ZTdq5aQ1yTXHx2fcMyowoDaSCBg44rzPJ/TDOrIH2WWWCaHmHgT
+o4GGMIGDMA4GA1UdDwEB/wQEAwIBpjAdBgNVHSUEFjAUBggrBgEFBQcDAQYIKwYB
+BQUHAwIwEgYDVR0TAQH/BAgwBgEB/wIBAzAdBgNVHQ4EFgQUTQ73F1MMbpOixBtd
+PooPJgbDJZQwHwYDVR0jBBgwFoAUzqFr6jvlx3blZtYapcZHVYpOKSMwCgYIKoZI
+zj0EAwIDRwAwRAIgJvgJ8ehKx0VenMyUT/MRXlmClARc1Np39/Fbp4GIbd8CIGhk
+MKVcDA5iuQZ7xhZU1S8POh1L9uT35UkE7+xmGNjr
+-----END CERTIFICATE-----
+-----BEGIN CERTIFICATE-----
+MIICYjCCAgigAwIBAgIUDEw2osNBr+H1o4WCvPSRIjNzUzQwCgYIKoZIzj0EAwIw
+fjELMAkGA1UEBhMCVVMxEzARBgNVBAgTCkNhbGlmb3JuaWExFjAUBgNVBAcTDVNh
+biBGcmFuY2lzY28xFDASBgNVBAoTC0Jsb2Nrc3RyZWFtMR0wGwYDVQQLExRDZXJ0
+aWZpY2F0ZUF1dGhvcml0eTENMAsGA1UEAxMER0wgLzAeFw0yMTA0MjYxNzE0MDBa
+Fw0zMTA0MjQxNzE0MDBaMH4xCzAJBgNVBAYTAlVTMRMwEQYDVQQIEwpDYWxpZm9y
+bmlhMRYwFAYDVQQHEw1TYW4gRnJhbmNpc2NvMRQwEgYDVQQKEwtCbG9ja3N0cmVh
+bTEdMBsGA1UECxMUQ2VydGlmaWNhdGVBdXRob3JpdHkxDTALBgNVBAMTBEdMIC8w
+WTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAATp83k4SqQ5geGRpIpDuU20vrZz8qJ8
+eBDYbW3nIlC8UM/PzVBSNA/MqWlAamB3YGK+VlgsEMbeOUWEM4c9ztVlo2QwYjAO
+BgNVHQ8BAf8EBAMCAaYwHQYDVR0lBBYwFAYIKwYBBQUHAwEGCCsGAQUFBwMCMBIG
+A1UdEwEB/wQIMAYBAf8CAQMwHQYDVR0OBBYEFM6ha+o75cd25WbWGqXGR1WKTikj
+MAoGCCqGSM49BAMCA0gAMEUCIGBkjyp1Nd/m/b3jEAUmxAisqCahuQUPuyQrIwo0
+ZF/9AiEAsZ8qZfkUZH2Ya7y6ccFTDps/ahsFWSrRao8ru3yhhrs=
+-----END CERTIFICATE-----)";
+
+static std::string nobody_key =
+R"(
+-----BEGIN PRIVATE KEY-----
+MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgmA2Srb58ZaDIW6sR
+B+1E6X8UnxMDeJPsnB4LVgpJyfuhRANCAASyjOUTUsZcvG19zwuN/t9CHZgGhOpC
+JgcYMvjjEsb17Lxhl9Ni6VgDqeXUaOFgUwkDewyarml2yY1oDv6CdrxV
+-----END PRIVATE KEY-----
+)";
+
+
+static std::string ca_crt =
+R"(
+-----BEGIN CERTIFICATE-----
+MIICYjCCAgigAwIBAgIUDEw2osNBr+H1o4WCvPSRIjNzUzQwCgYIKoZIzj0EAwIw
+fjELMAkGA1UEBhMCVVMxEzARBgNVBAgTCkNhbGlmb3JuaWExFjAUBgNVBAcTDVNh
+biBGcmFuY2lzY28xFDASBgNVBAoTC0Jsb2Nrc3RyZWFtMR0wGwYDVQQLExRDZXJ0
+aWZpY2F0ZUF1dGhvcml0eTENMAsGA1UEAxMER0wgLzAeFw0yMTA0MjYxNzE0MDBa
+Fw0zMTA0MjQxNzE0MDBaMH4xCzAJBgNVBAYTAlVTMRMwEQYDVQQIEwpDYWxpZm9y
+bmlhMRYwFAYDVQQHEw1TYW4gRnJhbmNpc2NvMRQwEgYDVQQKEwtCbG9ja3N0cmVh
+bTEdMBsGA1UECxMUQ2VydGlmaWNhdGVBdXRob3JpdHkxDTALBgNVBAMTBEdMIC8w
+WTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAATp83k4SqQ5geGRpIpDuU20vrZz8qJ8
+eBDYbW3nIlC8UM/PzVBSNA/MqWlAamB3YGK+VlgsEMbeOUWEM4c9ztVlo2QwYjAO
+BgNVHQ8BAf8EBAMCAaYwHQYDVR0lBBYwFAYIKwYBBQUHAwEGCCsGAQUFBwMCMBIG
+A1UdEwEB/wQIMAYBAf8CAQMwHQYDVR0OBBYEFM6ha+o75cd25WbWGqXGR1WKTikj
+MAoGCCqGSM49BAMCA0gAMEUCIGBkjyp1Nd/m/b3jEAUmxAisqCahuQUPuyQrIwo0
+ZF/9AiEAsZ8qZfkUZH2Ya7y6ccFTDps/ahsFWSrRao8ru3yhhrs=
+-----END CERTIFICATE-----
+)";
+
 static std::map<std::string, std::shared_ptr<nlohmann::json>> registered_networks = {
     { "localtest",
         std::make_shared<nlohmann::json>(nlohmann::json({
@@ -199,6 +279,9 @@ static std::map<std::string, std::shared_ptr<nlohmann::json>> registered_network
             { "wamp_url", "ws://localhost:8080/v2/ws" },
             { "greenlight_url", std::string() },
             { "lightning", false },
+            { "nobody_crt", std::string() },
+            { "nobody_key", std::string() },
+            { "ca_crt", std::string() },
         })) },
 
     { "liquid",
@@ -241,6 +324,9 @@ static std::map<std::string, std::shared_ptr<nlohmann::json>> registered_network
             { "wamp_url", "wss://green-liquid-mainnet.blockstream.com/v2/ws" },
             { "greenlight_url", std::string() },
             { "lightning", false },
+            { "nobody_crt", std::string() },
+            { "nobody_key", std::string() },
+            { "ca_crt", std::string() },
         })) },
 
     { "localtest-liquid",
@@ -283,6 +369,9 @@ static std::map<std::string, std::shared_ptr<nlohmann::json>> registered_network
             { "wamp_url", "ws://localhost:8080/v2/ws" },
             { "greenlight_url", std::string() },
             { "lightning", false },
+            { "nobody_crt", std::string() },
+            { "nobody_key", std::string() },
+            { "ca_crt", std::string() },
         })) },
 
     { "testnet-liquid",
@@ -325,6 +414,9 @@ static std::map<std::string, std::shared_ptr<nlohmann::json>> registered_network
             { "wamp_url", "wss://green-liquid-testnet.blockstream.com/v2/ws" },
             { "greenlight_url", std::string() },
             { "lightning", false },
+            { "nobody_crt", std::string() },
+            { "nobody_key", std::string() },
+            { "ca_crt", std::string() },
         })) },
 
     { "mainnet",
@@ -362,6 +454,9 @@ static std::map<std::string, std::shared_ptr<nlohmann::json>> registered_network
             { "wamp_url", "wss://green-bitcoin-mainnet.blockstream.com/v2/ws" },
             { "greenlight_url", std::string() },
             { "lightning", false },
+            { "nobody_crt", std::string() },
+            { "nobody_key", std::string() },
+            { "ca_crt", std::string() },
         })) },
 
     { "testnet",
@@ -399,6 +494,9 @@ static std::map<std::string, std::shared_ptr<nlohmann::json>> registered_network
             { "wamp_url", "wss://green-bitcoin-testnet.blockstream.com/v2/ws" },
             { "greenlight_url", std::string() },
             { "lightning", false },
+            { "nobody_crt", std::string() },
+            { "nobody_key", std::string() },
+            { "ca_crt", std::string() },
         })) },
 
     { "electrum-liquid",
@@ -441,6 +539,9 @@ static std::map<std::string, std::shared_ptr<nlohmann::json>> registered_network
             { "wamp_url", std::string() },
             { "greenlight_url", std::string() },
             { "lightning", false },
+            { "nobody_crt", std::string() },
+            { "nobody_key", std::string() },
+            { "ca_crt", std::string() },
         })) },
 
     { "electrum-localtest-liquid",
@@ -483,6 +584,9 @@ static std::map<std::string, std::shared_ptr<nlohmann::json>> registered_network
             { "wamp_url", std::string() },
             { "greenlight_url", std::string() },
             { "lightning", false },
+            { "nobody_crt", std::string() },
+            { "nobody_key", std::string() },
+            { "ca_crt", std::string() },
         })) },
 
     { "electrum-mainnet",
@@ -520,6 +624,9 @@ static std::map<std::string, std::shared_ptr<nlohmann::json>> registered_network
             { "wamp_url", std::string() },
             { "greenlight_url", std::string() },
             { "lightning", false },
+            { "nobody_crt", std::string() },
+            { "nobody_key", std::string() },
+            { "ca_crt", std::string() },
         })) },
 
     { "electrum-testnet",
@@ -557,6 +664,9 @@ static std::map<std::string, std::shared_ptr<nlohmann::json>> registered_network
             { "wamp_url", std::string() },
             { "greenlight_url", std::string() },
             { "lightning", false },
+            { "nobody_crt", std::string() },
+            { "nobody_key", std::string() },
+            { "ca_crt", std::string() },
         })) },
 
     { "electrum-localtest",
@@ -594,6 +704,9 @@ static std::map<std::string, std::shared_ptr<nlohmann::json>> registered_network
             { "wamp_url", std::string() },
             { "greenlight_url", std::string() },
             { "lightning", false },
+            { "nobody_crt", std::string() },
+            { "nobody_key", std::string() },
+            { "ca_crt", std::string() },
         })) },
 
     { "electrum-testnet-liquid",
@@ -636,6 +749,9 @@ static std::map<std::string, std::shared_ptr<nlohmann::json>> registered_network
             { "wamp_url", std::string() },
             { "greenlight_url", std::string() },
             { "lightning", false },
+            { "nobody_crt", std::string() },
+            { "nobody_key", std::string() },
+            { "ca_crt", std::string() },
         })) },
 
     /*
@@ -712,6 +828,9 @@ static std::map<std::string, std::shared_ptr<nlohmann::json>> registered_network
             { "wamp_url", std::string() },
             { "greenlight_url", "https://scheduler.testing.gl.blckstrm.com:2601" },
             { "lightning", true },
+            { "nobody_crt", nobody_crt },
+            { "nobody_key", nobody_key },
+            { "ca_crt", ca_crt },
         })) },
 
     { "greenlight-localtest",
@@ -749,6 +868,9 @@ static std::map<std::string, std::shared_ptr<nlohmann::json>> registered_network
             { "wamp_url", std::string() },
             { "greenlight_url", "http://localhost:2601" },
             { "lightning", true },
+            { "nobody_crt", std::string() },
+            { "nobody_key", std::string() },
+            { "ca_crt", std::string() },
         })) },
 };
 // clang-format on

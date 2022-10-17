@@ -25,8 +25,8 @@ pub fn network_parameters(with_certs: bool) -> (NetworkParameters, TempDir) {
     (network_parameters, temp_dir)
 }
 
-pub fn load_file_env(arg: &str) -> Vec<u8> {
-    fs::read(env::var(arg).unwrap()).unwrap()
+pub fn load_file_env(arg: &str) -> String {
+    fs::read_to_string(env::var(arg).unwrap()).unwrap()
 }
 
 pub fn register(network_parameters: &NetworkParameters) -> (Mnemonic, LoginInfo) {

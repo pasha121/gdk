@@ -78,7 +78,9 @@ impl TryFrom<responses::ListPeers> for ListPeersResponse {
     fn try_from(lp: responses::ListPeers) -> Result<ListPeersResponse> {
         let peers: Result<Vec<Peer>> = lp.peers.iter().map(|p| p.try_into()).collect();
 
-        Ok(ListPeersResponse { peers: peers? })
+        Ok(ListPeersResponse {
+            peers: peers?,
+        })
     }
 }
 
@@ -115,10 +117,7 @@ fn parse_scid(scid: &Option<String>) -> u64 {
         Some(i) => match ShortChannelId::from_str(&i) {
             Ok(i) => (i.block() as u64) << 40 | (i.txindex() as u64) << 16 | (i.outnum() as u64),
             Err(e) => {
-                warn!(
-                    "JSON-RPC returned an unparseable short_channel_id {}: {}",
-                    i, e
-                );
+                warn!("JSON-RPC returned an unparseable short_channel_id {}: {}", i, e);
                 0
             }
         },
@@ -167,9 +166,7 @@ impl TryFrom<FundChannelRequest> for requests::FundChannel {
         };
 
         if let requests::Amount::Any = amount {
-            return Err(anyhow!(
-                "Funding amount cannot be 'any'. Did you mean to use 'all'?"
-            ));
+            return Err(anyhow!("Funding amount cannot be 'any'. Did you mean to use 'all'?"));
         }
 
         if let requests::Amount::Millisatoshi(a) = amount {
@@ -293,11 +290,11 @@ impl TryFrom<InvoiceRequest> for requests::Invoice {
         // We can unwrap since we checked the None case above.
         let amt = i.amount.unwrap();
 
-        let preimage = if i.preimage.len() == 0 {
-            None
-        } else {
-            Some(hex::encode(i.preimage))
-        };
+        // let preimage = if i.preimage.len() == 0 {
+        //     None
+        // } else {
+        //     Some(hex::encode(i.preimage))
+        // };
 
         if let Some(amount::Unit::All(_)) = amt.unit {
             return Err(anyhow!(
@@ -311,7 +308,7 @@ impl TryFrom<InvoiceRequest> for requests::Invoice {
             description: i.description,
             exposeprivatechannels: None,
             dev_routes: None,
-            preimage,
+            preimage: None,
         })
     }
 }
@@ -363,9 +360,7 @@ impl From<responses::Pay> for Payment {
         Payment {
             destination: hex::decode(p.destination).unwrap(),
             payment_hash: hex::decode(p.payment_hash).unwrap(),
-            payment_preimage: p
-                .payment_preimage
-                .map_or(vec![], |p| hex::decode(p).unwrap()),
+            payment_preimage: p.payment_preimage.map_or(vec![], |p| hex::decode(p).unwrap()),
             amount: Some(Amount {
                 unit: Some(amount::Unit::Millisatoshi(p.msatoshi)),
             }),
@@ -424,10 +419,7 @@ impl TryFrom<Outpoint> for requests::Outpoint {
 
     fn try_from(value: Outpoint) -> Result<Self, Self::Error> {
         if value.txid.len() != 32 {
-            return Err(anyhow!(
-                "{} is not a valid transaction ID",
-                hex::encode(&value.txid)
-            ));
+            return Err(anyhow!("{} is not a valid transaction ID", hex::encode(&value.txid)));
         }
 
         Ok(requests::Outpoint {
@@ -481,9 +473,7 @@ impl TryFrom<responses::ListPaysPay> for Payment {
         Ok(Payment {
             destination: hex::decode(p.destination).unwrap(),
             payment_hash: hex::decode(p.payment_hash).unwrap(),
-            payment_preimage: p
-                .payment_preimage
-                .map_or(vec![], |p| hex::decode(p).unwrap()),
+            payment_preimage: p.payment_preimage.map_or(vec![], |p| hex::decode(p).unwrap()),
             status: match p.status.as_ref() {
                 "pending" => PayStatus::Pending as i32,
                 "complete" => PayStatus::Complete as i32,
@@ -593,7 +583,9 @@ impl TryFrom<responses::ListInvoices> for ListInvoicesResponse {
     type Error = anyhow::Error;
     fn try_from(l: responses::ListInvoices) -> Result<Self, Self::Error> {
         let invoices: Vec<Invoice> = l.invoices.iter().map(|i| i.into()).collect();
-        Ok(ListInvoicesResponse { invoices })
+        Ok(ListInvoicesResponse {
+            invoices,
+        })
     }
 }
 

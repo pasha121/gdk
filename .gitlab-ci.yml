@@ -44,6 +44,7 @@ stages:
 
 .ios_release:
   extends: .osx_test
+  when: manual # TODO remove
   before_script:
     - mkdir $CI_PROJECT_DIR/gdk-iphone
   artifacts:
@@ -55,8 +56,10 @@ stages:
 
 .ios_sim_release:
   extends: .osx_test
+  when: manual # TODO remove
   before_script:
     - mkdir $CI_PROJECT_DIR/gdk-iphone-sim
+    - cargo --version # TODO remove
   artifacts:
     name: "$CI_JOB_NAME-$CI_COMMIT_SHORT_SHA"
     expire_in: 1 day
@@ -92,9 +95,11 @@ release_py3m_ubuntu_18.04:
 
 release_py3m_osx:
   extends: .py_release
+  when: manual # TODO remove
   tags:
     - osx-ia
   script:
+    - cargo --version # TODO remove
     - cd $CI_PROJECT_DIR
     - python3 -m venv venv
     - source venv/bin/activate
@@ -103,9 +108,11 @@ release_py3m_osx:
 
 release_py3m_osx_m1:
   extends: .py_release
+  when: manual # TODO remove
   tags:
     - osx-m1
   script:
+    - cargo --version # TODO remove
     - cd $CI_PROJECT_DIR
     - python3 -m venv venv
     - source venv/bin/activate
@@ -133,6 +140,7 @@ test_clang:
 
 gdk_clang_ndk_armeabi-v7a:
   extends: .ndk_release
+  when: manual # TODO remove
   script:
     - mkdir gdk-android-jni
     - NUM_JOBS=16 ./tools/build.sh --install $PWD/gdk-android-jni --ndk armeabi-v7a --external-deps-dir /prebld/armv7a
@@ -152,6 +160,7 @@ gdk_clang_ndk_arm64-v8a-debug:
 
 gdk_clang_ndk_x86:
   extends: .ndk_release
+  when: manual # TODO remove
   script:
     - mkdir gdk-android-jni
     - NUM_JOBS=16 ./tools/build.sh --install $PWD/gdk-android-jni --ndk x86 --external-deps-dir /prebld/x86
@@ -188,7 +197,9 @@ test_rust:
 
 test_osx_clang:
   extends: .osx_test
+  when: manual # TODO remove
   script:
+    - cargo --version # TODO remove
     - cd $CI_PROJECT_DIR
     - ./tools/clean.sh dirs
     - virtualenv venv && source venv/bin/activate && pip install -r ./tools/requirements.txt
@@ -196,7 +207,9 @@ test_osx_clang:
 
 release_osx_ios:
   extends: .ios_release
+  when: manual # TODO remove
   script:
+    - cargo --version # TODO remove
     - cd $CI_PROJECT_DIR
     - ./tools/clean.sh dirs
     - virtualenv venv && source venv/bin/activate && pip install -r ./tools/requirements.txt
@@ -204,7 +217,9 @@ release_osx_ios:
 
 release_osx_ios_sim:
   extends: .ios_sim_release
+  when: manual # TODO remove
   script:
+    - cargo --version # TODO remove
     - cd $CI_PROJECT_DIR
     - ./tools/clean.sh dirs
     - virtualenv venv && source venv/bin/activate && pip install -r ./tools/requirements.txt
@@ -279,6 +294,7 @@ test_osx_clang_ndk_x86_64:
 test_windows_mingw_w64_cross:
   tags:
     - ga
+  when: manual # TODO remove
   artifacts:
     expire_in: 1 hour
     when: on_success
@@ -317,28 +333,28 @@ package_release:
     - cd $CI_PROJECT_DIR
     - mkdir gdk-android-symbols
     - mkdir gdk_dist
-    - find gdk-android-jni -name "*.syms" -type f -exec cp --parents {} gdk-android-symbols \;
-    - tar -czf gdk_dist/gdk-android-symbols.tar.gz gdk-android-symbols --remove-files
-    - find gdk-android-jni -name "*.a" -type f -delete
-    - find gdk-android-jni -name "*.syms" -type f -delete
-    - tar -czf gdk_dist/gdk-android-jni.tar.gz gdk-android-jni --remove-files
-    - tar -czf gdk_dist/gdk-iphone.tar.gz gdk-iphone --remove-files
-    - tar -czf gdk_dist/gdk-iphone-sim.tar.gz gdk-iphone-sim --remove-files
+    #- find gdk-android-jni -name "*.syms" -type f -exec cp --parents {} gdk-android-symbols \;
+    #- tar -czf gdk_dist/gdk-android-symbols.tar.gz gdk-android-symbols --remove-files
+    #- find gdk-android-jni -name "*.a" -type f -delete
+    #- find gdk-android-jni -name "*.syms" -type f -delete
+    #- tar -czf gdk_dist/gdk-android-jni.tar.gz gdk-android-jni --remove-files
+    #- tar -czf gdk_dist/gdk-iphone.tar.gz gdk-iphone --remove-files
+    #- tar -czf gdk_dist/gdk-iphone-sim.tar.gz gdk-iphone-sim --remove-files
     - mv gdk-python/*whl gdk_dist/
     - cd gdk_dist
     - /opt/process_release
   dependencies:
-  - gdk_clang_ndk_armeabi-v7a
+  #- gdk_clang_ndk_armeabi-v7a
   - gdk_clang_ndk_arm64-v8a
-  - gdk_clang_ndk_x86
+  #- gdk_clang_ndk_x86
   - gdk_clang_ndk_x86_64
   - release_py3m_bullseye
   - release_py3m_ubuntu_18.04
-  - release_py3m_osx
-  - release_py3m_osx_m1
-  - release_osx_ios
-  - apidocs
-  - release_osx_ios_sim
+  #- release_py3m_osx
+  #- release_py3m_osx_m1
+  #- release_osx_ios
+  #- apidocs
+  #- release_osx_ios_sim
 
 cp_gcloud:
   image: blockstream/gcloud-docker-tf:1.1.7

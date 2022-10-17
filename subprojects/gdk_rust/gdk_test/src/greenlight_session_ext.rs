@@ -65,7 +65,7 @@ impl GreenlightSessionExt for GreenlightSession {
                 }),
                 description: format!("{}", rng.gen::<u64>()),
                 label: format!("{}", rng.gen::<u64>()),
-                preimage: vec![],
+                // preimage: vec![],
             })
             .unwrap();
         invoice.bolt11

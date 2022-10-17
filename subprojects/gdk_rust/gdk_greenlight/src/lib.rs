@@ -297,7 +297,8 @@ impl GreenlightSession {
         let req = GetInfoRequest::default();
         Ok(self.runtime.block_on(self.client()?.get_info(req))?.into_inner())
     }
-    pub fn create_invoice(&mut self, req: InvoiceRequest) -> Result<Invoice, Error> {
+    pub fn create_invoice(&mut self, mut req: InvoiceRequest) -> Result<Invoice, Error> {
+        req.description = req.description.to_lowercase();
         Ok(self.runtime.block_on(self.client()?.create_invoice(req))?.into_inner())
     }
     pub fn keysend(&mut self, req: KeysendRequest) -> Result<Payment, Error> {
@@ -342,7 +343,7 @@ impl GreenlightSession {
     /// After recovering certificate and keys it logins with the server endpoint
     pub fn authenticate(&mut self, input: AuthenticateInput) -> Result<AuthenticateOutput, Error> {
         let mut path: PathBuf = self.network_parameters.state_dir.as_str().into();
-        if !path.is_dir() {
+        if path.exists() && !path.is_dir() {
             return Err(Error::StateDirNotDirectory(path));
         }
         path.push("greenlight_state");
