@@ -22,11 +22,15 @@ function set_cross_build_env() {
             export SDK_ARCH=arm
             export SDK_CPU=armv7
             export SDK_CFLAGS="-march=armv7-a -mfloat-abi=softfp -mfpu=neon -mthumb"
+            export CMAKE_TOOLCHAIN_FILE=${GDK_SOURCE_ROOT}/profiles/android-armeabi-v7a.cmake
+            export CMAKE_GENERATOR=Ninja
             ;;
         arm64-v8a)
             export SDK_ARCH=aarch64
             export SDK_CPU=arm64-v8a
             export SDK_CFLAGS="-march=armv8-a -flax-vector-conversions"
+            export CMAKE_TOOLCHAIN_FILE=${GDK_SOURCE_ROOT}/profiles/android-arm64-v8a.cmake
+            export CMAKE_GENERATOR=Ninja
             ;;
         iphone)
             export SDK_ARCH=aarch64
@@ -39,10 +43,14 @@ function set_cross_build_env() {
         x86_64)
             export SDK_ARCH=$HOST_ARCH
             export SDK_CPU=$HOST_ARCH
+            export CMAKE_TOOLCHAIN_FILE=${GDK_SOURCE_ROOT}/profiles/android-x86_64.cmake
+            export CMAKE_GENERATOR=Ninja
             ;;
         *)
             export SDK_ARCH=$2
             export SDK_CPU=i686
+            export CMAKE_TOOLCHAIN_FILE=${GDK_SOURCE_ROOT}/profiles/android-x86.cmake
+            export CMAKE_GENERATOR=Ninja
             ;;
     esac
 }
@@ -107,10 +115,14 @@ CXX_COMPILER=""
 if [ ${BUILD} == "--gcc" ]; then
     C_COMPILER="gcc"
     CXX_COMPILER="g++"
+    CMAKE_TOOLCHAIN_FILE=${GDK_SOURCE_ROOT}/profiles/gcc.cmake
+    CMAKE_GENERATOR=Ninja
 elif [ ${BUILD} == "--clang" ]; then
     C_COMPILER="clang"
     CXX_COMPILER="clang++"
     source tools/macos_env.sh
+    CMAKE_TOOLCHAIN_FILE=${GDK_SOURCE_ROOT}/profiles/clang.cmake
+    CMAKE_GENERATOR=Ninja
 elif [ ${BUILD} == "--ndk" ]; then
     C_COMPILER="clang"
     CXX_COMPILER="clang++"
@@ -143,6 +155,8 @@ elif [ ${BUILD} == "--iphone" ]; then
     CXX_COMPILER=${XCODE_DEFAULT_PATH}/clang++
     export CFLAGS="${IOS_CFLAGS} ${EXTRA_FLAGS}"
     export LDFLAGS="${IOS_LDFLAGS} ${EXTRA_FLAGS}"
+    CMAKE_TOOLCHAIN_FILE=${GDK_SOURCE_ROOT}/profiles/ios-iphone.cmake
+    CMAKE_GENERATOR=Xcode
 elif [ ${BUILD} == "--iphonesim" ]; then
     set_cross_build_env ios iphonesim
     . tools/ios_env.sh $BUILD
@@ -152,11 +166,14 @@ elif [ ${BUILD} == "--iphonesim" ]; then
     CXX_COMPILER=${XCODE_DEFAULT_PATH}/clang++
     export CFLAGS="${IOS_CFLAGS} ${EXTRA_FLAGS}"
     export LDFLAGS="${IOS_LDFLAGS} ${EXTRA_FLAGS}"
+    CMAKE_TOOLCHAIN_FILE=${GDK_SOURCE_ROOT}/profiles/ios-iphonesim.cmake
+    CMAKE_GENERATOR=Xcode
 elif [ ${BUILD} == "--mingw-w64" ]; then
     BUILD="--windows"
     C_COMPILER=gcc-posix
     CXX_COMPILER=g++-posix
-    CMAKE_COMPILER_PREFIX=x86_64-w64-mingw32-
+    CMAKE_TOOLCHAIN_FILE=${GDK_SOURCE_ROOT}/profiles/windows-mingw-w64.cmake
+    CMAKE_GENERATOR=Ninja
 else
     echo "BUILD \"${BUILD}\" not recognized, exiting"
     exit 0
@@ -291,9 +308,7 @@ source_hash="526e61ebc5a8093fd0eadc2ebe9d61a413b183043d99bdef7ab95f5086d6601a"
 prepare_sources ${source_url} ${source_filename} ${source_hash}
 export TOR_SRCDIR=`pwd`/tmp/${source_name}
 build ${name} ${source_name} "tmp"
-# cleaning up tor's mess
-            ### this following, although very powerful and useful in this case, seems not to be working with OS' ``find``
-# find ${GDK_BUILD_ROOT}/tor/ -mindepth 1 -maxdepth 1 ! -regex ".*\/tor\/src*" -exec rm -rf {} +
+# cleaning up tor
 find ${GDK_BUILD_ROOT}/tor/src/ -name "*.c" -type f -delete
 find ${GDK_BUILD_ROOT}/tor/src/ -name "*.o" -type f  -delete
 
@@ -311,9 +326,8 @@ prepare_sources ${source_url} ${source_filename} ${source_hash}
 ##### to accommodate ubuntu18.04 very old cmake version
 mkdir -p tmp/${source_name}/build
 cd tmp/${source_name}/build
-cmake .. -DCMAKE_CXX_COMPILER=${CMAKE_COMPILER_PREFIX}${CXX_COMPILER} -DCMAKE_CXX_COMPILER_WORKS:BOOL=TRUE -DCMAKE_INSTALL_PREFIX:PATH=${GDK_BUILD_ROOT}/${name} -DJSON_BuildTests:BOOL=OFF
-make
-make install
+cmake -G${CMAKE_GENERATOR} -DCMAKE_INSTALL_PREFIX:PATH=${GDK_BUILD_ROOT}/${name} -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} -DJSON_BuildTests:BOOL=OFF ..
+cmake --build . --target install
 cd -
 
 
@@ -330,9 +344,8 @@ prepare_sources ${source_url} ${source_filename} ${source_hash}
 ##### to accommodate ubuntu18.04 very old cmake version
 mkdir -p tmp/${source_name}/build
 cd tmp/${source_name}/build
-cmake .. -DCMAKE_C_COMPILER=${CMAKE_COMPILER_PREFIX}${C_COMPILER} -DCMAKE_C_COMPILER_WORKS:BOOL=TRUE -DCMAKE_CXX_COMPILER=${CMAKE_COMPILER_PREFIX}${CXX_COMPILER} -DCMAKE_CXX_COMPILER_WORKS:BOOL=TRUE -DCMAKE_INSTALL_PREFIX:PATH=${GDK_BUILD_ROOT}/${name}
-make
-make install
+cmake -G${CMAKE_GENERATOR} -DCMAKE_INSTALL_PREFIX:PATH=${GDK_BUILD_ROOT}/${name} -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} ..
+cmake --build . --target install
 cd -
 
 
@@ -349,9 +362,8 @@ prepare_sources ${source_url} ${source_filename} ${source_hash}
 ##### to accommodate ubuntu18.04 very old cmake version
 mkdir -p tmp/${source_name}/build
 cd tmp/${source_name}/build
-cmake .. -DCMAKE_CXX_COMPILER=${CMAKE_COMPILER_PREFIX}${CXX_COMPILER} -DCMAKE_CXX_COMPILER_WORKS:BOOL=TRUE -DCMAKE_INSTALL_PREFIX:PATH=${GDK_BUILD_ROOT}/${name} -DBOOST_ROOT:PATH=${GDK_BUILD_ROOT}/boost/build -DMSGPACK_CXX11:BOOL=ON
-make
-make install
+cmake -G${CMAKE_GENERATOR}  -DCMAKE_INSTALL_PREFIX:PATH=${GDK_BUILD_ROOT}/${name} -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} -DBOOST_ROOT:PATH=${GDK_BUILD_ROOT}/boost/build -DMSGPACK_USE_STATIC_BOOST:BOOL=ON -DMSGPACK_BUILD_DOCS:BOOL=OFF -DMSGPACK_CXX14:BOOL=ON ..
+cmake --build . --target install
 cd -
 
 
@@ -366,15 +378,10 @@ rm -f tmp/${source_name}/cmake/Modules/FindWebsocketpp.cmake
 rm -f tmp/${source_name}/cmake/Modules/FindMsgpack.cmake
 ${SED} -ie "s/Boost REQUIRED COMPONENTS program_options system thread random/Boost COMPONENTS system thread/g" tmp/${source_name}/cmake/Includes/CMakeLists.txt
 ${SED} -ie "s/Threads REQUIRED/Threads/g" tmp/${source_name}/cmake/Includes/CMakeLists.txt
-# cmake -S tmp/${source_name} -B tmp/${source_name}/build -DCMAKE_C_COMPILER=${CMAKE_COMPILER_PREFIX}${C_COMPILER} -DCMAKE_C_COMPILER_WORKS:BOOL=TRUE -DCMAKE_CXX_COMPILER=${CMAKE_COMPILER_PREFIX}${CXX_COMPILER} -DCMAKE_CXX_COMPILER_WORKS:BOOL=TRUE -DCMAKE_INSTALL_PREFIX:PATH=${GDK_BUILD_ROOT}/${name} -DBOOST_ROOT:PATH=${GDK_BUILD_ROOT}/boost/build -DOPENSSL_ROOT_DIR:PATH=${GDK_BUILD_ROOT}/openssl/build -DAUTOBAHN_BUILD_EXAMPLES:BOOL=OFF -DCMAKE_PREFIX_PATH="${GDK_BUILD_ROOT}/websocketpp;${GDK_BUILD_ROOT}/msgpack"
-# cmake --build tmp/${source_name}/build
-# cmake --install tmp/${source_name}/build
-##### to accommodate ubuntu18.04 very old cmake version
 mkdir -p tmp/${source_name}/build
 cd tmp/${source_name}/build
-cmake .. -DCMAKE_C_COMPILER=${CMAKE_COMPILER_PREFIX}${C_COMPILER} -DCMAKE_C_COMPILER_WORKS:BOOL=TRUE -DCMAKE_CXX_COMPILER=${CMAKE_COMPILER_PREFIX}${CXX_COMPILER} -DCMAKE_CXX_COMPILER_WORKS:BOOL=TRUE -DCMAKE_INSTALL_PREFIX:PATH=${GDK_BUILD_ROOT}/${name} -DBOOST_ROOT:PATH=${GDK_BUILD_ROOT}/boost/build -DOPENSSL_ROOT_DIR:PATH=${GDK_BUILD_ROOT}/openssl/build -DAUTOBAHN_BUILD_EXAMPLES:BOOL=OFF -DCMAKE_PREFIX_PATH="${GDK_BUILD_ROOT}/websocketpp;${GDK_BUILD_ROOT}/msgpack"
-make
-make install
+cmake -G${CMAKE_GENERATOR} -DCMAKE_INSTALL_PREFIX:PATH=${GDK_BUILD_ROOT}/${name} -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} -DBOOST_ROOT:PATH=${GDK_BUILD_ROOT}/boost/build -DOPENSSL_ROOT_DIR:PATH=${GDK_BUILD_ROOT}/openssl/build -DAUTOBAHN_BUILD_EXAMPLES:BOOL=OFF -DCMAKE_PREFIX_PATH="${GDK_BUILD_ROOT}/websocketpp;${GDK_BUILD_ROOT}/msgpack" ..
+cmake --build . --target install
 cd -
 
 
@@ -391,9 +398,8 @@ prepare_sources ${source_url} ${source_filename} ${source_hash}
 ##### to accommodate ubuntu18.04 very old cmake version
 mkdir -p tmp/${source_name}/build
 cd tmp/${source_name}/build
-cmake .. -DCMAKE_CXX_COMPILER=${CMAKE_COMPILER_PREFIX}${CXX_COMPILER} -DCMAKE_CXX_COMPILER_WORKS:BOOL=TRUE -DCMAKE_INSTALL_PREFIX:PATH=${GDK_BUILD_ROOT}/${name} -DGSL_STANDALONE_PROJECT:BOOL=OFF -DGSL_TEST:BOOL=OFF -DGSL_INSTALL:BOOL=ON
-make
-make install
+cmake -G${CMAKE_GENERATOR} -DCMAKE_INSTALL_PREFIX:PATH=${GDK_BUILD_ROOT}/${name} -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} -DGSL_STANDALONE_PROJECT:BOOL=OFF -DGSL_TEST:BOOL=OFF -DGSL_INSTALL:BOOL=ON ..
+cmake --build . --target install
 cd -
 
 
