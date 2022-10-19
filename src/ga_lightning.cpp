@@ -65,6 +65,7 @@ namespace sdk {
     nlohmann::json ga_lightning::authenticate(const std::string& /*sig_der_hex*/, const std::string& /*path_hex*/,
         const std::string& /*root_bip32_xpub*/, std::shared_ptr<signer> signer)
     {
+        set_signer(signer);
         return rust_call("internal_authenticate", signer->get_credentials(), m_session);
     }
 
@@ -360,7 +361,11 @@ namespace sdk {
 
     nlohmann::json ga_lightning::get_fee_estimates() { throw std::runtime_error("get_fee_estimates not implemented"); }
 
-    std::string ga_lightning::get_system_message() { throw std::runtime_error("get_system_message not implemented"); }
+    std::string ga_lightning::get_system_message()
+    {
+        // TODO
+        return std::string{};
+    }
 
     std::pair<std::string, std::vector<uint32_t>> ga_lightning::get_system_message_info(
         const std::string& system_message)
