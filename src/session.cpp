@@ -182,8 +182,10 @@ namespace sdk {
             p.swap(m_impl); // Ensure the session_impl is deleted in this block
             if (p) {
                 const bool is_electrum = p->get_network_parameters().is_electrum();
+                const bool is_greenlight = p->get_network_parameters().is_lightning();
                 GDK_LOG_SEV(log_level::info)
-                    << "destroying " << (is_electrum ? "single" : "multi") << "sig session " << (void*)this;
+                    << "destroying " << (is_greenlight ? "greenlight" : (is_electrum ? "singlesig" : "multisig"))
+                    << " session " << (void*)this;
                 p->disconnect();
             }
         });

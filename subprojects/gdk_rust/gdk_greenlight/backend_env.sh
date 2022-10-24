@@ -1,4 +1,4 @@
-BASE=${PWD}/gdk_greenlight/regtest
+BASE=${PWD}/gdk_greenlight/${NETWORK:=regtest}
 export GL_NOBODY_CRT="${BASE}/gl_cert_chain.txt"
 export GL_NOBODY_KEY="${BASE}/gl_nobody_key.txt"
 export GL_CA_CRT="${BASE}/gl_ca_crt.txt"

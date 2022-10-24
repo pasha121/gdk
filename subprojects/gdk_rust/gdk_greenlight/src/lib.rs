@@ -41,13 +41,13 @@ pub struct GreenlightSession {
 
 pub struct SignerHandle {
     _handle: JoinHandle<Result<(), Error>>,
-    shutdown_signal: Sender<()>,
+    _shutdown_signal: Sender<()>,
 }
 
 impl Drop for GreenlightSession {
     fn drop(&mut self) {
-        if let Some(signer_handle) = self.signer_handle.take() {
-            let _ = self.runtime.block_on(signer_handle.shutdown_signal.send(()));
+        if let Some(_signer_handle) = self.signer_handle.take() {
+            //let _ = self.runtime.block_on(signer_handle.shutdown_signal.send(()));
             //let _ = signer_handle.handle.join(); // TODO uncomment when it doesn't freeze
         }
     }
@@ -175,13 +175,14 @@ impl GreenlightSession {
             debug!("Starting signer thread");
             let rt = Builder::new_current_thread().enable_io().enable_time().build()?;
             rt.block_on(async move { signer.run_forever(recv).await })?;
+            debug!("Closing signer thread");
             Ok(())
         });
         debug!("thread spawned");
 
         self.signer_handle = Some(SignerHandle {
             _handle: handle,
-            shutdown_signal,
+            _shutdown_signal: shutdown_signal,
         });
 
         self.node_id_hex = Some(login_info.node_id.clone());
@@ -285,6 +286,7 @@ impl GreenlightSession {
     }
 
     pub fn connect_peer(&mut self, req: ConnectRequest) -> Result<ConnectResponse, Error> {
+        log::debug!("connect peer {:?}", req);
         Ok(self.runtime.block_on(self.client()?.connect_peer(req))?.into_inner())
     }
     pub fn disconnect(&mut self, req: DisconnectRequest) -> Result<DisconnectResponse, Error> {

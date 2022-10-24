@@ -46,7 +46,7 @@ namespace sdk {
         throw std::runtime_error("reconnect_hint not implemented");
     }
 
-    void ga_lightning::disconnect() { throw std::runtime_error("disconnect not implemented"); }
+    void ga_lightning::disconnect() {}
 
     nlohmann::json ga_lightning::validate_asset_domain_name(const nlohmann::json& params)
     {

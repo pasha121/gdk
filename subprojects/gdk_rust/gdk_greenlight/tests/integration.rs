@@ -1,9 +1,11 @@
+use bitcoin::Network;
 use bitcoincore_rpc::RpcApi;
 use clightningrpc::requests;
 use gdk_greenlight::How;
 use gdk_greenlight::{AuthenticateInput, GreenlightSession, SetLocalEncryptionKeysInput};
 use gdk_test::greenlight::{bitcoin_client, init, lightning_client};
 use gdk_test::{GreenlightSessionExt, LightningNodeExt, RpcNodeExt};
+use gl_client::pb;
 use serde_json::{json, Value};
 
 #[ignore]
@@ -52,6 +54,28 @@ fn test_get_info() {
     let mut session = GreenlightSession::new(network_parameters).unwrap();
     session.login(login_info, mnemonic).unwrap();
     assert!(session.get_info().is_ok());
+}
+
+#[ignore]
+#[test]
+fn test_connect_testnet() {
+    let _ = env_logger::try_init();
+    let (mut network_parameters, _temp_dir) = gdk_test::greenlight::network_parameters(true);
+    network_parameters.development = false;
+    assert_eq!(Network::Testnet, network_parameters.network());
+
+    let mnemonic = bip39::Mnemonic::parse("abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about").unwrap();
+    let login_info = GreenlightSession::recover(&network_parameters, &mnemonic).unwrap();
+
+    let mut session = GreenlightSession::new(network_parameters).unwrap();
+    session.login(login_info, mnemonic).unwrap();
+    assert!(session.get_info().is_ok());
+
+    let res = session.connect_peer(pb::ConnectRequest {
+        node_id: "02661ec31ab6e97aaec73bbfe1845e88a333b8650db4e1be13a82af9b0c7413a11".to_string(), // Blockstream testnet node
+        addr: "35.185.91.205:19735".to_string(),
+    });
+    assert!(res.is_ok());
 }
 
 #[ignore]
