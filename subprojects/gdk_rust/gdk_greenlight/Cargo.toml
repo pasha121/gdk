@@ -27,3 +27,6 @@ gdk-test = { path = "../gdk_test" }
 tempfile = "3.2.0"
 bitcoincore-rpc = "0.16.0"
 clightningrpc = { git="https://github.com/laanwj/rust-clightning-rpc", rev="8ba2d6c7735c598b64a5fcfca9285b54b7f864c3" }
+
+[patch.crates-io]
+mio = {git = "https://github.com/tokio-rs/mio", branch = "v0.8.5"}
