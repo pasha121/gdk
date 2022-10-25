@@ -348,4 +348,6 @@ make install
 cd -
 
 
+echo "test test test"
+
 rm -rf tmp
