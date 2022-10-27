@@ -4,7 +4,7 @@ import os
 
 kwargs = {
     'name': 'greenaddress',
-    'version': os.environ['GDK_VERSION'],
+    'version': '@PROJECT_VERSION@',
     'description': 'gdk Bitcoin library',
     'long_description': 'Python bindings for the gdk Bitcoin library',
     'url': 'https://github.com/blockstream/gdk',
@@ -35,7 +35,7 @@ kwargs = {
     },
 
     'packages': ['greenaddress'],
-    'package_dir': {'': os.environ['PYTHON_DESTDIR']},
+    'package_dir': {'': '@_wheelDestDir@'},
 }
 
 import platform
@@ -46,10 +46,7 @@ class _build_py(distutils.command.build_py.build_py):
 
     def build_libgreenaddress(self):
 
-        # Copy the so that has just been built to the build_dir that distutils expects it to be in
-        # The extension of the built lib is dylib on osx
-        so_ext = 'dylib' if platform.system() == 'Darwin' else 'dll' if platform.system() == 'Windows' else 'so'
-        src_so = 'lib/libgreenaddress.{}'.format(so_ext)
+        src_so = '$<TARGET_LINKER_FILE:greenaddress>'
         distutils.dir_util.mkpath(self.build_lib)
         dest_so = os.path.join(self.build_lib, 'libgreenaddress.so')
         distutils.file_util.copy_file(src_so, dest_so)

@@ -1,6 +1,8 @@
-set(CMAKE_SYSTEM_NAME Linux)
-set(CMAKE_SYSTEM_PROCESSOR x86_64)
+include (${CMAKE_CURRENT_LIST_DIR}/common.cmake)
+
 set(CMAKE_C_COMPILER clang)
 set(CMAKE_CXX_COMPILER clang++)
-set(CMAKE_CXX_STANDARD 14)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+list(APPEND GDK_LINK_OPTIONS
+    "SHELL:-static-libstdc++"
+)

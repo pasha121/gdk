@@ -1,0 +1,29 @@
+#! /usr/bin/env bash
+set -e
+
+greenaddress=$<TARGET_FILE:greenaddress-full>
+gdk_rust=$<TARGET_FILE:gdk-rust>
+wally=@wallycore_LIBDIR@/libwallycore.a
+secp256k1=@libsecp256k1_LIBDIR@/libsecp256k1.a
+libevent=@libevent_LIBDIR@/libevent.a
+maybeEventThread=@_maybeLibeventPthreads@
+boost_log=@Boost_LIBRARY_DIRS@/libboost_log.a
+boost_chrono=@Boost_LIBRARY_DIRS@/libboost_chrono.a
+boost_date_time=@Boost_LIBRARY_DIRS@/libboost_date_time.a
+boost_system=@Boost_LIBRARY_DIRS@/libboost_system.a
+boost_thread=@Boost_LIBRARY_DIRS@/libboost_thread.a
+openssl_ssl=@OPENSSL_SSL_LIBRARY@
+openssl_crypto=@OPENSSL_CRYPTO_LIBRARY@
+zlib=@ZLIB_LIBRARIES@
+tors="@_torLibList@"
+
+compiler=@CMAKE_C_COMPILER@
+
+libraries="$greenaddress $gdk_rust $wally $secp256k1 $libevent $maybeEventThread $boost_log $boost_log $boost_chrono $boost_date_time $boost_system $boost_thread $openssl_ssl $openssl_crypto $zlib $tors"
+
+
+libtool_options="--tag=CC --mode=link $compiler"
+if [ "$(uname)" = "Darwin" ]; then
+    libtool_options=""
+fi
+libtool $libtool_options -static -o $greenaddress $libraries

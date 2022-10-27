@@ -175,7 +175,11 @@ function build() {
 
     compress_patch
     build_dependencies
+    cmake_deps_dir="${bld_root}/external_deps"
 
+    cd ${bld_root}
+    cmake -DEXTERNAL-DEPS-DIR=${cmake_deps_dir} -DCMAKE_TOOLCHAIN_FILE=../profiles/${C_COMPILER}.cmake .. # not using Ninja to avoid conflicts with meson
+    cd -
     if [ ! -f "build-$C_COMPILER/build.ninja" ]; then
         rm -rf build-$C_COMPILER/meson-private
         CXXFLAGS=$EXTRA_CXXFLAGS $SCAN_BUILD meson build-$C_COMPILER --default-library=${LIBTYPE} --werror ${MESON_OPTIONS}
@@ -275,6 +279,11 @@ if [ \( "$BUILD" = "--ndk" \) ]; then
             ./tools/make_txt.sh $bld_root $bld_root/$1_$2_ndk.txt $1 ndk $2
 
             build_dependencies
+            cmake_deps_dir="${bld_root}/external_deps"
+
+            cd ${bld_root}
+            cmake -DEXTERNAL-DEPS-DIR=${cmake_deps_dir} -DCMAKE_TOOLCHAIN_FILE=../profiles/$1-$2.cmake .. # not using Ninja to avoid conflicts with meson
+            cd -
             meson $bld_root --cross-file $bld_root/$1_$2_ndk.txt --default-library=${LIBTYPE} ${MESON_OPTIONS}
         fi
         $NINJA -C $bld_root -j$NUM_JOBS -v $NINJA_TARGET
@@ -310,6 +319,11 @@ if [ \( "$BUILD" = "--iphone" \) -o \( "$BUILD" = "--iphonesim" \) ]; then
             ./tools/make_txt.sh $bld_root $bld_root/$1_$2_ios.txt $2 $2 $2
 
             build_dependencies
+            cmake_deps_dir="${bld_root}/external_deps"
+
+            cd ${bld_root}
+            cmake -DEXTERNAL-DEPS-DIR=${cmake_deps_dir} -DCMAKE_TOOLCHAIN_FILE=../profiles/$1-$2.cmake .. # not using Ninja to avoid conflicts with meson
+            cd -
             meson $bld_root --cross-file $bld_root/$1_$2_ios.txt --default-library=${LIBTYPE} ${MESON_OPTIONS}
         fi
         $NINJA -C $bld_root -j$NUM_JOBS -v $NINJA_TARGET
@@ -341,6 +355,11 @@ if [ \( "$BUILD" = "--mingw-w64" \) ]; then
             ./tools/make_txt.sh $bld_root $bld_root/$1.txt $1 $1
 
             build_dependencies
+            cmake_deps_dir="${bld_root}/external_deps"
+
+            cd ${bld_root}
+            cmake -DEXTERNAL-DEPS-DIR=${cmake_deps_dir} -DCMAKE_TOOLCHAIN_FILE=../profiles/$1-$2.cmake .. # not using Ninja to avoid conflicts with meson
+            cd -
             meson $bld_root --cross-file $bld_root/$1.txt --default-library=${LIBTYPE} ${MESON_OPTIONS}
         fi
         $NINJA -C $bld_root -j$NUM_JOBS -v $NINJA_TARGET

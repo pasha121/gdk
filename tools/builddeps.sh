@@ -15,7 +15,6 @@ have_cmd()
 }
 
 function set_cross_build_env() {
-    bld_root="$PWD/build-clang-$1-$2"
     export HOST_ARCH=$2
     case $2 in
         armeabi-v7a)
@@ -120,8 +119,11 @@ if [ ${BUILD} == "--gcc" ]; then
 elif [ ${BUILD} == "--clang" ]; then
     C_COMPILER="clang"
     CXX_COMPILER="clang++"
-    source tools/macos_env.sh
     CMAKE_TOOLCHAIN_FILE=${GDK_SOURCE_ROOT}/profiles/clang.cmake
+    if [ "$(uname)" = "Darwin" ]; then
+        . tools/macos_env.sh
+        CMAKE_TOOLCHAIN_FILE=${GDK_SOURCE_ROOT}/profiles/macOS.cmake
+    fi
     CMAKE_GENERATOR=Ninja
 elif [ ${BUILD} == "--ndk" ]; then
     C_COMPILER="clang"
@@ -155,7 +157,7 @@ elif [ ${BUILD} == "--iphone" ]; then
     CXX_COMPILER=${XCODE_DEFAULT_PATH}/clang++
     export CFLAGS="${IOS_CFLAGS} ${EXTRA_FLAGS}"
     export LDFLAGS="${IOS_LDFLAGS} ${EXTRA_FLAGS}"
-    CMAKE_TOOLCHAIN_FILE=${GDK_SOURCE_ROOT}/profiles/ios-iphone.cmake
+    CMAKE_TOOLCHAIN_FILE=${GDK_SOURCE_ROOT}/profiles/iphoneos.cmake
     CMAKE_GENERATOR=Xcode
 elif [ ${BUILD} == "--iphonesim" ]; then
     set_cross_build_env ios iphonesim
@@ -166,7 +168,7 @@ elif [ ${BUILD} == "--iphonesim" ]; then
     CXX_COMPILER=${XCODE_DEFAULT_PATH}/clang++
     export CFLAGS="${IOS_CFLAGS} ${EXTRA_FLAGS}"
     export LDFLAGS="${IOS_LDFLAGS} ${EXTRA_FLAGS}"
-    CMAKE_TOOLCHAIN_FILE=${GDK_SOURCE_ROOT}/profiles/ios-iphonesim.cmake
+    CMAKE_TOOLCHAIN_FILE=${GDK_SOURCE_ROOT}/profiles/iphonesimulator.cmake
     CMAKE_GENERATOR=Xcode
 elif [ ${BUILD} == "--mingw-w64" ]; then
     BUILD="--windows"
@@ -320,10 +322,6 @@ source_name="json-3.10.5"
 source_filename="json-3.10.5.tar.gz"
 source_hash="5daca6ca216495edf89d167f808d1d03c4a4d929cef7da5e10f135ae1540c7e4"
 prepare_sources ${source_url} ${source_filename} ${source_hash}
-# cmake -S tmp/${source_name} -B tmp/${source_name}/build -DCMAKE_CXX_COMPILER=${CMAKE_COMPILER_PREFIX}${CXX_COMPILER} -DCMAKE_CXX_COMPILER_WORKS:BOOL=TRUE -DCMAKE_INSTALL_PREFIX:PATH=${GDK_BUILD_ROOT}/${name} -DJSON_BuildTests:BOOL=OFF
-# cmake --build tmp/${source_name}/build
-# cmake --install tmp/${source_name}/build
-##### to accommodate ubuntu18.04 very old cmake version
 mkdir -p tmp/${source_name}/build
 cd tmp/${source_name}/build
 cmake -G${CMAKE_GENERATOR} -DCMAKE_INSTALL_PREFIX:PATH=${GDK_BUILD_ROOT}/${name} -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} -DJSON_BuildTests:BOOL=OFF ..
@@ -338,10 +336,6 @@ source_name="websocketpp-1026e877449aeee27e0bb51746a96ab42d133652"
 source_filename="websocketpp-1026e877449aeee27e0bb51746a96ab42d133652.tar.gz"
 source_hash="82644fce179590ec73daf3a42383b26378716ba61bbde7ef460816170fed5aeb"
 prepare_sources ${source_url} ${source_filename} ${source_hash}
-# cmake -S tmp/${source_name} -B tmp/${source_name}/build -DCMAKE_C_COMPILER=${CMAKE_COMPILER_PREFIX}${C_COMPILER} -DCMAKE_C_COMPILER_WORKS:BOOL=TRUE -DCMAKE_CXX_COMPILER=${CMAKE_COMPILER_PREFIX}${CXX_COMPILER} -DCMAKE_CXX_COMPILER_WORKS:BOOL=TRUE -DCMAKE_INSTALL_PREFIX:PATH=${GDK_BUILD_ROOT}/${name}
-# cmake --build tmp/${source_name}/build
-# cmake --install tmp/${source_name}/build
-##### to accommodate ubuntu18.04 very old cmake version
 mkdir -p tmp/${source_name}/build
 cd tmp/${source_name}/build
 cmake -G${CMAKE_GENERATOR} -DCMAKE_INSTALL_PREFIX:PATH=${GDK_BUILD_ROOT}/${name} -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} ..
@@ -356,10 +350,6 @@ source_name="msgpack-cxx-4.1.1"
 source_filename="msgpack-4.1.1.tar.gz"
 source_hash="8115c5edcf20bc1408c798a6bdaec16c1e52b1c34859d4982a0fb03300438f0b"
 prepare_sources ${source_url} ${source_filename} ${source_hash}
-# cmake -S tmp/${source_name} -B tmp/${source_name}/build -DCMAKE_CXX_COMPILER=${CMAKE_COMPILER_PREFIX}${CXX_COMPILER} -DCMAKE_CXX_COMPILER_WORKS:BOOL=TRUE -DCMAKE_INSTALL_PREFIX:PATH=${GDK_BUILD_ROOT}/${name} -DBOOST_ROOT:PATH=${GDK_BUILD_ROOT}/boost/build -DMSGPACK_CXX11:BOOL=ON
-# cmake --build tmp/${source_name}/build
-# cmake --install tmp/${source_name}/build
-##### to accommodate ubuntu18.04 very old cmake version
 mkdir -p tmp/${source_name}/build
 cd tmp/${source_name}/build
 cmake -G${CMAKE_GENERATOR}  -DCMAKE_INSTALL_PREFIX:PATH=${GDK_BUILD_ROOT}/${name} -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} -DBOOST_ROOT:PATH=${GDK_BUILD_ROOT}/boost/build -DMSGPACK_USE_STATIC_BOOST:BOOL=ON -DMSGPACK_BUILD_DOCS:BOOL=OFF -DMSGPACK_CXX14:BOOL=ON ..
@@ -392,10 +382,6 @@ source_name="GSL-a3534567187d2edc428efd3f13466ff75fe5805c"
 source_filename="GSL-a3534567187d2edc428efd3f13466ff75fe5805c.tar.gz"
 source_hash="c0379cff645543d5076216bc5b22a3426de57796fc043527a24a6e494628d8a6"
 prepare_sources ${source_url} ${source_filename} ${source_hash}
-# cmake -S tmp/${source_name} -B tmp/${source_name}/build -DCMAKE_CXX_COMPILER=${CMAKE_COMPILER_PREFIX}${CXX_COMPILER} -DCMAKE_CXX_COMPILER_WORKS:BOOL=TRUE -DCMAKE_INSTALL_PREFIX:PATH=${GDK_BUILD_ROOT}/${name} -DGSL_STANDALONE_PROJECT:BOOL=OFF -DGSL_TEST:BOOL=OFF -DGSL_INSTALL:BOOL=ON
-# cmake --build tmp/${source_name}/build
-# cmake --install tmp/${source_name}/build
-##### to accommodate ubuntu18.04 very old cmake version
 mkdir -p tmp/${source_name}/build
 cd tmp/${source_name}/build
 cmake -G${CMAKE_GENERATOR} -DCMAKE_INSTALL_PREFIX:PATH=${GDK_BUILD_ROOT}/${name} -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} -DGSL_STANDALONE_PROJECT:BOOL=OFF -DGSL_TEST:BOOL=OFF -DGSL_INSTALL:BOOL=ON ..

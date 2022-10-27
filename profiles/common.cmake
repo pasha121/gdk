@@ -1,0 +1,20 @@
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+if(NOT DEFINED CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE "Release" CACHE INTERNAL "")
+endif()
+
+set(CMAKE_POSITION_INDEPENDENT_CODE TRUE)
+set(CMAKE_CXX_VISIBILITY_PRESET hidden)
+set(CMAKE_C_VISIBILITY_PRESET hidden)
+set(CMAKE_VISIBILITY_INLINES_HIDDEN YES)
+
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+    set(GDK_LINK_OPTIONS
+        "LINKER:-z,now"
+        "LINKER:-z,relro"
+        "LINKER:-z,noexecstack"
+        "LINKER:-z,undefs"
+    )
+endif()

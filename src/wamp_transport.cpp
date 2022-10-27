@@ -597,7 +597,7 @@ namespace sdk {
         {
             // TODO: Set m_last_ping_ts whenever we receive a subscription
             unique_unlock unlocker(locker);
-            const auto options = autobahn::wamp_subscribe_options("exact");
+            const autobahn::wamp_subscribe_options options("exact");
             sub = s->subscribe(
                        topic, [fn](const autobahn::wamp_event& e) { fn(wamp_cast_json(e)); }, options)
                       .get();

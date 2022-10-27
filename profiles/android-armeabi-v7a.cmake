@@ -1,14 +1,9 @@
-set(ANDROID_NDK $ENV{ANDROID_NDK})
+include (${CMAKE_CURRENT_LIST_DIR}/common.cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/android-helpers.cmake)
+
+
+########
 set(ANDROID_ABI "armeabi-v7a")
 set(ANDROID_PLATFORM "android-19")
-
-set(CMAKE_CXX_STANDARD 14)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-# allow cmake to search outside of NDK sysroot
-# https://gitlab.kitware.com/cmake/cmake/-/issues/22183
-set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY BOTH)
-set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE BOTH)
-set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE BOTH)
-
-include(${ANDROID_NDK}/build/cmake/android.toolchain.cmake)
-
+initialize_android_environment()
+set(_rustTriple "armv7-linux-androideabi")
