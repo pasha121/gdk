@@ -1,7 +1,0 @@
-_GDKRUST_create_session
-_GDKRUST_call_session
-_GDKRUST_destroy_string
-_GDKRUST_destroy_session
-_GDKRUST_set_notification_handler
-_GDKRUST_call
-_rust_eh_personality

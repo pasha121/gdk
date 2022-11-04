@@ -288,7 +288,11 @@ wallycore = declare_dependency(
     }
 )
 
+
+gdkrust = subproject('gdk_rust')
 subproject_deps = [
+    ### gdk_rust
+    gdkrust.get_variable('gdk_rust_dep'),
     #### wallycore
     wallycore,
     compiler.find_library('wallycore', dirs: meson.global_build_root() / externaldir / 'libwally-core/build/lib'),
@@ -366,9 +370,6 @@ subproject_deps = [
 if not cross_win_build
     subproject_deps += compiler.find_library('event_pthreads', dirs: meson.global_build_root() / externaldir / 'libevent/build/lib')
 endif
-
-gdkrust = subproject('gdk_rust')
-subproject_deps += gdkrust.get_variable('gdk_rust_dep')
 
 # includes
 incdir = include_directories(['.', 'subprojects/gdk_rust'])
