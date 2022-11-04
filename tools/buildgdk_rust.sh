@@ -52,7 +52,6 @@ if [ \( "$1" = "--ndk" \) ]; then
     else
         export PATH=${PATH}:${ANDROID_NDK}/toolchains/llvm/prebuilt/linux-x86_64/bin
         export AR=${ANDROID_NDK}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar
-        export OBJCOPY=${ANDROID_NDK}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-objcopy
     fi
     if [ "$HOST_ARCH" = "armeabi-v7a" ]; then
         RUSTTARGET=armv7-linux-androideabi
@@ -104,15 +103,4 @@ if [ -z "$RUSTTARGET" ]; then
 else
     mkdir -p "target/${BUILDTYPE}"
     cp "target/${RUSTTARGET}/$BUILDTYPE/${OUT_LIB_FILE}" "${BUILD_ROOT}/$OUTPUT"
-fi
-
-APPLE_KEEP="${SOURCE_ROOT}/subprojects/gdk_rust/apple-exported-symbols"
-KEEP="${SOURCE_ROOT}/subprojects/gdk_rust/exported-symbols"
-WEAKEN="${SOURCE_ROOT}/subprojects/gdk_rust/weaken-symbols"
-
-if [ -z "${OBJCOPY}" ]; then
-    # on Darwin we use ld to hide all the unnecessary symbols (mostly secp256k1 stuff)
-    ld ${LD_ARCH} -o "${BUILD_ROOT}/$OUTPUT" -r -exported_symbols_list "$APPLE_KEEP" "${BUILD_ROOT}/$OUTPUT"
-else
-    $OBJCOPY --strip-unneeded --keep-symbols="$KEEP" --weaken-symbols="$WEAKEN" "${BUILD_ROOT}/$OUTPUT"
 fi
