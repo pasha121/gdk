@@ -97,7 +97,7 @@ impl FromStr for Currency {
 
         // TODO: support harder to parse pairs (LBTC?)
         match s {
-            "BTC" => Ok(Currency::BTC),
+            "BTC" | "XBT" => Ok(Currency::BTC),
             "USD" => Ok(Currency::USD),
             "EUR" => Ok(Currency::EUR),
             "GBP" => Ok(Currency::GBP),
@@ -154,7 +154,38 @@ impl<'de> de::Deserialize<'de> for Pair {
     where
         D: de::Deserializer<'de>,
     {
-        todo!()
+        struct PairVisitor;
+
+        impl<'de> de::Visitor<'de> for PairVisitor {
+            type Value = Pair;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                // Some currencies like LBTC or USDT have 4 letter tickers,
+                // that's the reason for the 6-8 range.
+                formatter.write_str("a string of 6-8 letters representing two currency tickers")
+            }
+
+            fn visit_str<E>(self, s: &str) -> Result<Self::Value, E>
+            where
+                E: de::Error,
+            {
+                if s.len() < 6 || s.len() > 8 {
+                    return Err(E::invalid_length(s.len(), &"a string of 6-8 letters"));
+                }
+
+                let (first, bytes) = match Currency::from_str(&s[..3]) {
+                    Ok(currency) => (currency, 3),
+
+                    Err(_) => (Currency::from_str(&s[..4]).map_err(E::custom)?, 4),
+                };
+
+                let second = Currency::from_str(&s[bytes..]).map_err(E::custom)?;
+
+                Ok(Pair(first, second))
+            }
+        }
+
+        deserializer.deserialize_str(PairVisitor)
     }
 }
 
