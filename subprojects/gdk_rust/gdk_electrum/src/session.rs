@@ -145,7 +145,7 @@ impl Session for ElectrumSession {
 
             "get_settings" => self.get_settings().to_json(),
             "get_available_currencies" => {
-                self.get_available_currencies(&serde_json::from_value(input)?).map_err(Into::into)
+                self.get_available_currencies(&serde_json::from_value(input)?).to_json()
             }
             "change_settings" => self.change_settings(&serde_json::from_value(input)?).to_json(),
 

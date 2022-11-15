@@ -43,7 +43,7 @@ use gdk_common::{be::*, State};
 use gdk_common::elements::confidential::{self, Asset, Nonce};
 use gdk_common::elements::encode;
 use gdk_common::elements::pset::PartiallySignedTransaction;
-use gdk_common::exchange_rates::ExchangeRatesCache;
+use gdk_common::exchange_rates::{Currency, ExchangeRatesCache, Pair};
 use gdk_common::network;
 use gdk_common::NetworkId;
 use std::collections::hash_map::Entry;
@@ -1115,9 +1115,60 @@ impl ElectrumSession {
         &self,
         params: &GetAvailableCurrenciesParams,
     ) -> Result<Value, Error> {
-        // TODO: use blockstream endpoint listing all available currencies when
-        // it'll be available.
-        Ok(json!({ "all": [ "USD" ], "per_exchange": { "Blockstream": [ "USD" ] } }))
+        // TODO: use this once we have the currency endpoint
+        // let value = self
+        //     .build_request_agent()?
+        //     .get(&params.url)
+        //     .call()?
+        //     .into_json::<serde_json::Map<String, Value>>()?
+        //     .remove("indexes")
+        //     .ok_or(Error::AvailableIndexesBadResponse {
+        //         expected: "field `indexes` to be set".into(),
+        //     })?;
+
+        let value = serde_json::from_str::<serde_json::Map<String, Value>>(
+            r#"{"indexes":[
+"XBTUSD",
+"XBTUSDT",
+"XBTEUR",
+"XBTGBP",
+"XBTRUB",
+"XBTNGN",
+"XBTCAD",
+"XBTUAH",
+"XBTAUD",
+"XBTPLN",
+"XBTCHF",
+"XBTTRY",
+"XBTINR",
+"XBTIDR",
+"XBTMXN",
+"XBTARS",
+"XBTJPY",
+"XBTCOP",
+"XBTZAR",
+"XBTAED",
+"XBTKRW",
+"XBTMYR",
+"XBTKHD",
+"XBTSGD",
+"XBTCLP",
+"XBTPEN",
+"XBTUGX"
+]}"#,
+        )?
+        .remove("indexes")
+        .ok_or(Error::AvailableIndexesBadResponse {
+            expected: "field `indexes` to be set".into(),
+        })?;
+
+        let currencies = serde_json::from_value::<Vec<Pair>>(value)?
+            .iter()
+            // The fiat currency is the second in the pair
+            .map(Pair::second)
+            .collect::<Vec<Currency>>();
+
+        Ok(json!({ "all": &currencies, "per_exchange": { "Blockstream": &currencies  } }))
     }
 
     pub fn get_unspent_outputs(&self, opt: &GetUnspentOpt) -> Result<GetUnspentOutputs, Error> {
