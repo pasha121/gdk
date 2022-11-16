@@ -145,6 +145,8 @@ pub struct ElectrumSession {
 
     xr_cache: ExchangeRatesCache,
 
+    available_currencies: Option<Vec<Currency>>,
+
     first_sync: Arc<AtomicBool>,
 }
 
@@ -1112,22 +1114,23 @@ impl ElectrumSession {
     }
 
     pub fn get_available_currencies(
-        &self,
+        &mut self,
         params: &GetAvailableCurrenciesParams,
     ) -> Result<Value, Error> {
-        // TODO: use this once we have the currency endpoint
-        // let value = self
-        //     .build_request_agent()?
-        //     .get(&params.url)
-        //     .call()?
-        //     .into_json::<serde_json::Map<String, Value>>()?
-        //     .remove("indexes")
-        //     .ok_or(Error::AvailableIndexesBadResponse {
-        //         expected: "field `indexes` to be set".into(),
-        //     })?;
+        let currencies = self.available_currencies.get_or_insert({
+            // TODO: use this once we have the currency endpoint
+            // let value = self
+            //     .build_request_agent()?
+            //     .get(&params.url)
+            //     .call()?
+            //     .into_json::<serde_json::Map<String, Value>>()?
+            //     .remove("indexes")
+            //     .ok_or(Error::AvailableIndexesBadResponse {
+            //         expected: "field `indexes` to be set".into(),
+            //     })?;
 
-        let value = serde_json::from_str::<serde_json::Map<String, Value>>(
-            r#"{"indexes":[
+            let value = serde_json::from_str::<serde_json::Map<String, Value>>(
+                r#"{"indexes":[
 "XBTUSD",
 "XBTUSDT",
 "XBTEUR",
@@ -1156,17 +1159,18 @@ impl ElectrumSession {
 "XBTPEN",
 "XBTUGX"
 ]}"#,
-        )?
-        .remove("indexes")
-        .ok_or(Error::AvailableIndexesBadResponse {
-            expected: "field `indexes` to be set".into(),
-        })?;
+            )?
+            .remove("indexes")
+            .ok_or(Error::AvailableIndexesBadResponse {
+                expected: "field `indexes` to be set".into(),
+            })?;
 
-        let currencies = serde_json::from_value::<Vec<Pair>>(value)?
-            .iter()
-            // The fiat currency is the second in the pair
-            .map(Pair::second)
-            .collect::<Vec<Currency>>();
+            serde_json::from_value::<Vec<Pair>>(value)?
+                .iter()
+                // The fiat currency is the second in the pair
+                .map(Pair::second)
+                .collect::<Vec<Currency>>()
+        });
 
         Ok(json!({ "all": &currencies, "per_exchange": { "Blockstream": &currencies  } }))
     }
