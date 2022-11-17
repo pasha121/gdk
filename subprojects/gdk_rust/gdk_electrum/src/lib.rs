@@ -43,13 +43,14 @@ use gdk_common::{be::*, State};
 use gdk_common::elements::confidential::{self, Asset, Nonce};
 use gdk_common::elements::encode;
 use gdk_common::elements::pset::PartiallySignedTransaction;
-use gdk_common::exchange_rates::{Currency, ExchangeRatesCache, Pair};
+use gdk_common::exchange_rates::{Currency, ExchangeRatesCache};
 use gdk_common::network;
 use gdk_common::NetworkId;
 use std::collections::hash_map::Entry;
 use std::collections::{HashMap, HashSet};
 use std::convert::TryInto;
 use std::path::PathBuf;
+use std::str::FromStr;
 use std::time::{Duration, Instant};
 use std::{iter, thread};
 
@@ -1165,11 +1166,12 @@ impl ElectrumSession {
                 expected: "field `indexes` to be set".into(),
             })?;
 
-            serde_json::from_value::<Vec<Pair>>(value)?
+            serde_json::from_value::<Vec<String>>(value)?
                 .iter()
-                // The fiat currency is the second in the pair
-                .map(Pair::second)
-                .collect::<Vec<Currency>>()
+                // The first 3 bytes of the returned index pairs are guaranteed
+                // to be XBT, the ticker symbol of bitcoin.
+                .map(|pair| Currency::from_str(&pair[3..]))
+                .collect::<Result<Vec<Currency>, _>>()?
         });
 
         Ok(json!({ "all": &currencies, "per_exchange": { "Blockstream": &currencies  } }))
