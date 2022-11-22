@@ -1,4 +1,5 @@
 use crate::be::{BEOutPoint, BEScript, BESigHashType, BETransaction, BETransactionEntry, BETxid};
+use crate::exchange_rates::Currency;
 use crate::util::{is_confidential_txoutsecrets, now, weight_to_vsize};
 use crate::NetworkId;
 use bitcoin::Network;
@@ -751,15 +752,19 @@ pub struct SetAccountHiddenOpt {
 /// see comment for struct Settings
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct Pricing {
-    currency: String,
+    pub currency: Currency,
+
+    /// This field is no longer used since all the pricing data is now fetched
+    /// using Blockstream's own feed, and is defined here for compatibility with
+    /// multisig.
     exchange: String,
 }
 
 impl Default for Settings {
     fn default() -> Self {
         let pricing = Pricing {
-            currency: "USD".to_string(),
-            exchange: "BITFINEX".to_string(),
+            currency: Currency::USD,
+            exchange: "Blockstream".to_string(),
         };
         Settings {
             unit: "BTC".to_string(),
