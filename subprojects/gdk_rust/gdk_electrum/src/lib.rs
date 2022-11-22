@@ -1107,6 +1107,17 @@ impl ElectrumSession {
     }
 
     pub fn change_settings(&mut self, value: &Value) -> Result<(), Error> {
+        if let Some(Pricing {
+            currency,
+            ..
+        }) = value.get("pricing").and_then(|p| serde_json::from_value::<Pricing>(p.clone()).ok())
+        {
+            let currencies = self.update_available_currencies()?;
+            if !currencies.contains(&currency) {
+                return Err(Error::Generic(format!("Unsupported currency: {currency}")));
+            }
+        }
+
         let mut settings = self.get_settings()?;
         settings.update(value);
         self.store()?.write()?.insert_settings(Some(settings.clone()))?;
