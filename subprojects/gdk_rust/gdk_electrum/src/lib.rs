@@ -1114,15 +1114,15 @@ impl ElectrumSession {
         Ok(())
     }
 
-    pub fn get_available_currencies(
-        &mut self,
-        params: &GetAvailableCurrenciesParams,
-    ) -> Result<Value, Error> {
-        let currencies = self.available_currencies.get_or_insert({
+    /// Returns the currencies in
+    /// [`available_currencies`](ElectrumSession::available_currencies) if
+    /// already set, or updates it by fetching the currencies from the endpoint otherwise.
+    fn update_available_currencies(&mut self) -> Result<&[Currency], Error> {
+        if self.available_currencies.is_none() {
             // TODO: use this once we have the currency endpoint
             // let value = self
             //     .build_request_agent()?
-            //     .get(&params.url)
+            //     .get(&self.network.price)
             //     .call()?
             //     .into_json::<serde_json::Map<String, Value>>()?
             //     .remove("indexes")
@@ -1166,14 +1166,21 @@ impl ElectrumSession {
                 expected: "field `indexes` to be set".into(),
             })?;
 
-            serde_json::from_value::<Vec<String>>(value)?
-                .iter()
-                // The first 3 bytes of the returned index pairs are guaranteed
-                // to be XBT, the ticker symbol of bitcoin.
-                .map(|pair| Currency::from_str(&pair[3..]))
-                .collect::<Result<Vec<Currency>, _>>()?
-        });
+            self.available_currencies = Some(
+                serde_json::from_value::<Vec<String>>(value)?
+                    .iter()
+                    // The first 3 bytes of the returned index pairs are guaranteed
+                    // to be XBT, the ticker symbol of bitcoin.
+                    .map(|pair| Currency::from_str(&pair[3..]))
+                    .collect::<Result<Vec<Currency>, _>>()?,
+            );
+        }
 
+        Ok(self.available_currencies.as_deref().unwrap())
+    }
+
+    pub fn get_available_currencies(&mut self) -> Result<Value, Error> {
+        let currencies = self.update_available_currencies()?;
         Ok(json!({ "all": &currencies, "per_exchange": { "Blockstream": &currencies  } }))
     }
 

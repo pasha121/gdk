@@ -39,6 +39,8 @@ pub struct NetworkParameters {
     pub spv_multi: Option<bool>,
     pub spv_servers: Option<Vec<String>>,
 
+    pub price_url: String,
+
     pub proxy: Option<String>,
     pub use_tor: Option<bool>,
     pub max_reorg_blocks: Option<u32>,
