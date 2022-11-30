@@ -1,5 +1,5 @@
 use crate::error::Error;
-use crate::headers::bitcoin::{HeadersChain, HEADERS_FILE_MUTEX};
+use crate::headers::bitcoin::HeadersChain;
 use crate::headers::liquid::Verifier;
 use crate::session::determine_electrum_url;
 use electrum_client::{Client, ElectrumApi, GetMerkleRes};
@@ -88,12 +88,7 @@ impl ParamsMethods for SPVCommonParams {
 pub fn download_headers(
     input: &SPVDownloadHeadersParams,
 ) -> Result<SPVDownloadHeadersResult, Error> {
-    let network =
-        input.params.bitcoin_network().expect("download_headers only in bitcoin networks");
-    let _lock = HEADERS_FILE_MUTEX
-        .get(&network)
-        .expect("unreachable because map populate with every enum variants")
-        .lock()?;
+    input.params.bitcoin_network().expect("download_headers only in bitcoin networks");
     debug!("download_headers {:?}", input);
     let client = input.params.build_client()?;
     let mut chain = input.params.headers_chain()?;
@@ -126,14 +121,6 @@ pub fn download_headers(
 ///
 /// used to expose SPV functionality through C interface
 pub fn spv_verify_tx(input: &SPVVerifyTxParams) -> Result<SPVVerifyTxResult, Error> {
-    let mut _lock;
-    if let NetworkId::Bitcoin(network) = input.params.network.id() {
-        // Liquid hasn't a shared headers chain file
-        _lock = HEADERS_FILE_MUTEX
-            .get(&network)
-            .expect("unreachable because map populate with every enum variants")
-            .lock()?;
-    }
     debug!("spv_verify_tx {:?}", input);
     let txid = BETxid::from_hex(&input.txid, input.params.network.id())?;
 

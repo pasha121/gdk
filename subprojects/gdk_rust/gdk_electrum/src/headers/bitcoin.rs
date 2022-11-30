@@ -14,18 +14,53 @@ use once_cell::sync::Lazy;
 use std::collections::HashMap;
 use std::fs::{File, OpenOptions};
 use std::io::{Read, Seek, SeekFrom, Write};
-use std::iter::FromIterator;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
-pub static HEADERS_FILE_MUTEX: Lazy<HashMap<Network, Mutex<()>>> = Lazy::new(|| {
-    HashMap::from_iter([
-        (Network::Bitcoin, Mutex::new(())),
-        (Network::Testnet, Mutex::new(())),
-        (Network::Regtest, Mutex::new(())),
-        (Network::Signet, Mutex::new(())), // unused
-    ])
-});
+static HEADERS: Lazy<Mutex<HashMap<(Network, PathBuf), File>>> =
+    Lazy::new(|| Mutex::new(HashMap::new()));
+
+/// Initializes a header file by adding it to the [`HEADERS`] map, creating
+/// the file and adding the genesis block's header if it doesn't already exist.
+fn initialize_header_file<P: AsRef<Path>>(path: P, network: Network) -> Result<(), Error> {
+    let path = path.as_ref();
+
+    let headers = &mut *HEADERS.lock()?;
+
+    if headers.get(&(network, path.to_owned())).is_some() {
+        return Ok(());
+    }
+
+    let exists = path.exists();
+
+    let mut file = OpenOptions::new().read(true).append(true).create(true).open(path)?;
+
+    if !exists {
+        let first = genesis_block(network).header;
+        file.write_all(&serialize(&first))?;
+    }
+
+    headers.insert((network, path.to_owned()), file);
+
+    Ok(())
+}
+
+/// # Panics
+///
+/// This function will panic if the header file has not been initialized by
+/// calling [`initialize_header_file`].
+fn with_header_file<'a, F, R>(path: &Path, network: Network, fun: F) -> Result<R, Error>
+where
+    F: FnOnce(&mut File) -> Result<R, Error>,
+{
+    let headers = &mut *HEADERS.lock()?;
+
+    let header = headers
+        .get_mut(&(network, path.to_owned()))
+        .expect("{network}'s header file has not been initialized at {path:?}");
+
+    fun(header)
+}
 
 #[derive(Debug)]
 pub struct HeadersChain {
@@ -45,28 +80,18 @@ impl HeadersChain {
         std::fs::create_dir_all(path.as_ref())?;
         let mut filepath: PathBuf = path.as_ref().into();
         filepath.push(format!("headers_chain_{}", network));
-        let checkpoints = get_checkpoints(network);
-        if !filepath.exists() {
-            info!("{:?} chain file doesn't exist, creating", filepath);
-            let last = genesis_block(network).header;
-            let mut file = File::create(&filepath)?;
-            file.write_all(&serialize(&last))?;
-            let height = 0;
 
-            Ok(HeadersChain {
-                path: filepath,
-                height,
-                last,
-                checkpoints,
-                network,
-            })
-        } else {
-            info!("{:?} chain file exists, reading", filepath);
-            let mut file = File::open(&filepath)?;
+        initialize_header_file(&filepath, network)?;
+
+        let checkpoints = get_checkpoints(network);
+
+        let (height, last) = with_header_file(&filepath, network, |file| {
             let file_size = file.metadata()?.len();
+
             if file_size % 80 != 0 || file_size < 80 {
                 return Err(Error::InvalidHeaders);
             }
+
             let wanted_seek = file_size - 80;
             let effective_seek = file.seek(SeekFrom::Start(wanted_seek))?;
             if wanted_seek != effective_seek {
@@ -76,16 +101,16 @@ impl HeadersChain {
             let mut buf = [0u8; 80];
             file.read_exact(&mut buf)?;
             let height = (file_size as u32 / 80) - 1;
-            let last: BlockHeader = deserialize(&buf)?;
+            Ok((height, deserialize(&buf)?))
+        })?;
 
-            Ok(HeadersChain {
-                path: filepath,
-                height,
-                last,
-                checkpoints,
-                network,
-            })
-        }
+        Ok(HeadersChain {
+            path: filepath,
+            height,
+            last,
+            checkpoints,
+            network,
+        })
     }
 
     pub fn height(&self) -> u32 {
@@ -124,17 +149,18 @@ impl HeadersChain {
     }
 
     pub fn get(&self, height: u32) -> Result<BlockHeader, Error> {
-        let mut file = File::open(&self.path)?;
-        let wanted_seek = height as u64 * 80;
-        let effective_seek = file.seek(SeekFrom::Start(wanted_seek))?;
-        if wanted_seek != effective_seek {
-            warn!("Seek failed wanted:{} effective:{}", wanted_seek, effective_seek);
-            return Err(Error::Generic("failed seek".into()));
-        }
-        let mut buf = [0u8; 80];
-        file.read_exact(&mut buf)?;
-        let header: BlockHeader = deserialize(&buf)?;
-        Ok(header)
+        with_header_file(&self.path, self.network, |file| {
+            let wanted_seek = height as u64 * 80;
+            let effective_seek = file.seek(SeekFrom::Start(wanted_seek))?;
+            if wanted_seek != effective_seek {
+                warn!("Seek failed wanted:{} effective:{}", wanted_seek, effective_seek);
+                return Err(Error::Generic("failed seek".into()));
+            }
+            let mut buf = [0u8; 80];
+            file.read_exact(&mut buf)?;
+            let header: BlockHeader = deserialize(&buf)?;
+            Ok(header)
+        })
     }
 
     /// to handle reorgs, it's necessary to remove some of the last headers
@@ -142,11 +168,13 @@ impl HeadersChain {
         let headers_to_remove = headers_to_remove.min(self.height);
         let new_height = self.height - headers_to_remove;
         let new_size = (new_height + 1) as u64 * 80;
-        let file = OpenOptions::new().write(true).open(&self.path)?;
         self.last = self.get(new_height)?;
         self.height = new_height;
-        file.set_len(new_size)?;
-        Ok(())
+
+        with_header_file(&self.path, self.network, |file| {
+            file.set_len(new_size)?;
+            Ok(())
+        })
     }
 
     pub fn tip(&self) -> BlockHeader {
@@ -235,9 +263,11 @@ impl HeadersChain {
     /// also this data if requested
     fn flush(&mut self, serialized: &mut Vec<u8>) -> Result<(), Error> {
         if !serialized.is_empty() {
-            let mut file = OpenOptions::new().append(true).open(&self.path)?;
-            file.write_all(&serialized)?;
-            file.flush()?;
+            with_header_file(&self.path, self.network, |file| {
+                file.write_all(&serialized)?;
+                file.flush()?;
+                Ok(())
+            })?;
             serialized.clear();
         }
         Ok(())

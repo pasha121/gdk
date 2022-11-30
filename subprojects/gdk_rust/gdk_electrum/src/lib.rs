@@ -7,7 +7,6 @@ extern crate serde_json;
 extern crate gdk_common;
 
 use gdk_common::log::{debug, info, trace, warn};
-use headers::bitcoin::HEADERS_FILE_MUTEX;
 use serde_json::Value;
 
 pub mod account;
@@ -526,14 +525,6 @@ impl ElectrumSession {
                     if wait_or_close(&user_wants_to_sync, sync_interval) {
                         info!("closing headers thread");
                         break;
-                    }
-                    let mut _lock;
-                    if let ChainOrVerifier::Chain(chain) = &headers.checker {
-                        _lock = HEADERS_FILE_MUTEX
-                            .get(&chain.network)
-                            .expect("unreachable because map populate with every enum variants")
-                            .lock()
-                            .unwrap();
                     }
 
                     if let Ok(client) = headers_url.build_client(proxy.as_deref(), None) {
