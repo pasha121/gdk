@@ -3,7 +3,7 @@ cache:
   paths:
     - subprojects/packagecache/
 
-image: greenaddress/ci@sha256:dad739cbaa366afed1a73d74f985787950e0298fa5e58791e529923c83ad72db
+image: greenaddress/ci@sha256:2edbb831a6cd53cd86b36a0487f4161639437ecace5f3ffe865878212bce98a4
 
 stages:
   - format
@@ -12,57 +12,70 @@ stages:
   - deploy
   - publish
 
+
+.osx_env:
+  tags:
+    - osx-ia
+  variables:
+    NUM_JOBS: 16
+    PREBUILT_SUBDIR: "prebuilt"
+  # cache:
+  #   key: "$CI_RUNNER_ID-$CI_JOB_NAME"
+  #   paths:
+  #     - $PREBUILT_SUBDIR
+
+
 .ndk_release:
   tags:
     - ga
+  variables:
+    INSTALL_PATH: "gdk-android-jni"
   artifacts:
     name: "$CI_JOB_NAME-$CI_COMMIT_SHORT_SHA"
     expire_in: 1 day
     when: on_success
     paths:
-    - gdk-android-jni
-
-.osx_test:
-  tags:
-    - osx
-  cache:
-    key: "$CI_JOB_NAME"
-    paths:
-      - subprojects/packagecache/
+    - $INSTALL_PATH
 
 .py_release:
   tags:
     - ga
-  before_script:
-    - mkdir $CI_PROJECT_DIR/gdk-python
+  variables:
+    INSTALL_PATH: "gdk-python"
   artifacts:
     name: "$CI_JOB_NAME-$CI_COMMIT_SHORT_SHA"
     expire_in: 1 day
     when: on_success
     paths:
-    - gdk-python
+    - $INSTALL_PATH
 
 .ios_release:
-  extends: .osx_test
+  extends: .osx_env
+  variables:
+    INSTALL_PATH: "gdk-iphone"
   before_script:
-    - mkdir $CI_PROJECT_DIR/gdk-iphone
+    - mkdir $CI_PROJECT_DIR/$INSTALL_PATH
   artifacts:
     name: "$CI_JOB_NAME-$CI_COMMIT_SHORT_SHA"
     expire_in: 1 day
     when: on_success
     paths:
-    - gdk-iphone
+    - $INSTALL_PATH
 
 .ios_sim_release:
-  extends: .osx_test
+  extends: .osx_env
+  variables:
+    INSTALL_PATH: "gdk-iphone-sim"
   before_script:
-    - mkdir $CI_PROJECT_DIR/gdk-iphone-sim
+    - mkdir $CI_PROJECT_DIR/$INSTALL_PATH
   artifacts:
     name: "$CI_JOB_NAME-$CI_COMMIT_SHORT_SHA"
     expire_in: 1 day
     when: on_success
     paths:
-    - gdk-iphone-sim
+    - $INSTALL_PATH
+
+
 
 test_format:
   tags:
@@ -71,232 +84,350 @@ test_format:
   script:
     - ./tools/format.sh && git diff --exit-code
 
-release_py3m_bullseye:
-  extends: .py_release
+rust_audit:
+  tags:
+    - ga
+  stage: format
   script:
-    - NUM_JOBS=16 ./tools/build.sh --install $PWD/gdk-python --gcc --python-version 3.9 --external-deps-dir /prebuild/gcc
+    - source /root/.cargo/env
+    - cd subprojects/gdk_rust/
+    - cargo audit -D warnings --ignore RUSTSEC-2021-0127
 
-release_py3m_bullseye_debug:
-  extends: .py_release
+
+
+build_gcc_bullseye:
+  tags:
+    - ga
+  stage: build
+  script:
+    - source /root/.cargo/env
+    - cmake -DEXTERNAL-DEPS-DIR:PATH=/prebuild/gcc -DCMAKE_TOOLCHAIN_FILE=profiles/gcc.cmake -DENABLE_TESTS:BOOL=TRUE -B build-gcc -S .
+    - cmake --build build-gcc --parallel 16
+  artifacts:
+    expire_in: 2 hrs
+    paths:
+      - build-gcc/tests
+      - build-gcc/CTestTestfile.cmake
+
+test_gcc_bullseye:
+  tags:
+    - ga
+  stage: test
+  needs: [build_gcc_bullseye]
+  script:
+    - cd build-gcc 
+    - ctest
+
+
+build_gcc_bullseye_debug:
+  tags:
+    - ga
+  stage: build
   when: manual
   script:
-    - NUM_JOBS=16 ./tools/build.sh --buildtype=debug --install $PWD/gdk-python --gcc --python-version 3.9 --external-deps-dir /prebuild/gcc
+    - source /root/.cargo/env
+    - cmake -DEXTERNAL-DEPS-DIR:PATH=/prebuild/gcc-debug -DCMAKE_TOOLCHAIN_FILE=profiles/gcc.cmake -DENABLE_TESTS:BOOL=TRUE -DCMAKE_BUILD_TYPE=Debug -B build-gcc-debug -S .
+    - cmake --build build-gcc-debug --parallel 16
+  artifacts:
+    expire_in: 2 hrs
+    paths:
+      - build-gcc-debug/tests
+      - build-gcc-debug/CTestTestfile.cmake
 
-release_py3m_ubuntu_18.04:
-  image: greenaddress/ubuntu_ci@sha256:bf83a3116c8fcb21e6535497c3aa7db266f4e8a823387ad30442c5a53f54bbff
-  extends: .py_release
+test_gcc_bullseye_debug:
+  tags:
+    - ga
+  stage: test
+  needs: [build_gcc_bullseye_debug]
   script:
-    - NUM_JOBS=16 ./tools/build.sh --install $PWD/gdk-python --gcc --python-version 3.6 --external-deps-dir /prebuild/gcc
+    - cd build-gcc-debug/
+    - ctest
 
-release_py3m_osx:
+
+
+build_clang_bullseye:
+  extends: .py_release
+  stage: build
+  script:
+    - source /root/.cargo/env
+    - cmake -DEXTERNAL-DEPS-DIR:PATH=/prebuild/clang -DCMAKE_TOOLCHAIN_FILE=profiles/clang.cmake -B build-clang -S .
+    - cmake --build build-clang --parallel 16
+    - cmake --build build-clang --target python-wheel
+    - cmake --install build-clang --prefix $INSTALL_PATH
+    - cmake --install build-clang --prefix $INSTALL_PATH --component gdk-dev
+
+
+build_clang_bullseye_debug:
+  tags:
+    - ga
+  stage: build
+  script:
+    - source /root/.cargo/env
+    - cmake -DEXTERNAL-DEPS-DIR:PATH=/prebuild/clang-debug -DCMAKE_TOOLCHAIN_FILE=profiles/clang.cmake -DENABLE_TESTS:BOOL=TRUE -DCMAKE_BUILD_TYPE=Debug -B build-clang-debug -S .
+    - cmake --build build-clang-debug --parallel 16
+  artifacts:
+    expire_in: 2 hrs
+    paths:
+      - build-clang-debug/tests
+      - build-clang-debug/CTestTestfile.cmake
+
+test_clang_bullseye_debug:
+  tags:
+    - ga
+  stage: test
+  needs: [build_clang_bullseye_debug]
+  script:
+    - cd build-clang-debug
+    - ctest
+
+
+
+build_clang_osx:
   extends: .py_release
   tags:
     - osx-ia
+  stage: build
+  variables:
+    NUM_JOBS: 16
+    PREBUILT_SUBDIR: "prebuilt"
+    PREBUILT_DIR: "$CI_BUILDS_DIR/$PREBUILT_SUBDIR/clang-osx"
   script:
     - cd $CI_PROJECT_DIR
     - python3 -m venv venv
     - source venv/bin/activate
     - pip install -r ./tools/requirements.txt
-    - NUM_JOBS=16 ./tools/builddeps.sh --clang --prefix $PWD/clang-deps
-    - NUM_JOBS=16 ./tools/build.sh --install $PWD/gdk-python --clang --python-version 3.9 --external-deps-dir $PWD/clang-deps
+    - if [[ ! -d "$PREBUILT_DIR" ]]; then ./tools/builddeps.sh --clang --prefix $PREBUILT_DIR; fi
+    - cmake -DEXTERNAL-DEPS-DIR:PATH=$PREBUILT_DIR -DENABLE_TESTS:BOOL=TRUE -DCMAKE_TOOLCHAIN_FILE=profiles/macOS.cmake -DPYTHON_REQUIRED_VERSION=3.9 -B build-clang -S .
+    - cmake --build build-clang --parallel 16
+    - cmake --build build-clang --target python-wheel
+    - cmake --install build-clang --prefix $INSTALL_PATH
+    - cmake --install build-clang --prefix $INSTALL_PATH --component gdk-dev
+  cache:
+    key: "$CI_RUNNER_ID-$CI_JOB_NAME"
+    paths:
+      - $PREBUILT_SUBDIR
 
-release_py3m_osx_m1:
+
+build_clang_osx_m1:
   extends: .py_release
   tags:
     - osx-m1
+  stage: build
+  variables:
+    NUM_JOBS: 16
+    PREBUILT_SUBDIR: "prebuilt"
+    PREBUILT_DIR: "$CI_BUILDS_DIR/$PREBUILT_SUBDIR/clang-osx-m1"
   script:
     - cd $CI_PROJECT_DIR
     - python3 -m venv venv
     - source venv/bin/activate
     - pip install -r ./tools/requirements.txt
-    - NUM_JOBS=16 ./tools/builddeps.sh --clang --prefix $PWD/clang-deps
-    - NUM_JOBS=16 ./tools/build.sh --install $PWD/gdk-python --clang --python-version 3.9 --external-deps-dir $PWD/clang-deps
+    - if [[ ! -d "$PREBUILT_DIR" ]]; then ./tools/builddeps.sh --clang --prefix $PREBUILT_DIR; fi
+    - cmake -DEXTERNAL-DEPS-DIR:PATH=$PREBUILT_DIR -DENABLE_TESTS:BOOL=TRUE -DCMAKE_TOOLCHAIN_FILE=profiles/macOS.cmake -DPYTHON_REQUIRED_VERSION=3.9 -B build-clang -S .
+    - cmake --build build-clang --parallel 16
+    - cmake --build build-clang --target python-wheel
+    - cmake --install build-clang --prefix $INSTALL_PATH
+    - cmake --install build-clang --prefix $INSTALL_PATH --component gdk-dev
+  cache:
+    key: "$CI_RUNNER_ID-$CI_JOB_NAME"
+    paths:
+      - $PREBUILT_SUBDIR
 
-test_fedora_clang:
-  image: greenaddress/fedora_ci@sha256:78997558029c74fbf6ad078b0eb75663749a216b676f6df2eb17dba8c97acc0e
-  tags:
-    - ga
-  script:
-    - NUM_JOBS=16 ./tools/build.sh --clang --external-deps-dir /prebuild/clang
 
-test_clang_debug:
-  tags:
-    - ga
-  script:
-    - NUM_JOBS=16 ./tools/build.sh --clang --enable-tests --external-deps-dir /prebuild/clang # REVERTME
-    - ./build-clang/test_aes_gcm >/dev/null
-    - ./build-clang/test_json
-    - ./build-clang/test_networks
-
-gdk_clang_ndk_armeabi-v7a:
-  extends: .ndk_release
-  script:
-    - mkdir gdk-android-jni
-    - NUM_JOBS=16 ./tools/build.sh --install $PWD/gdk-android-jni --ndk armeabi-v7a --external-deps-dir /prebuild/armv7a
-
-gdk_clang_ndk_arm64-v8a:
-  extends: .ndk_release
-  script:
-    - mkdir gdk-android-jni
-    - NUM_JOBS=16 ./tools/build.sh --install $PWD/gdk-android-jni --ndk arm64-v8a --external-deps-dir /prebuild/armv8a
-
-gdk_clang_ndk_arm64-v8a-debug:
-  extends: .ndk_release
-  when: manual
-  script:
-    - mkdir gdk-android-jni
-    - NUM_JOBS=16 ./tools/build.sh --buildtype=debug --install $PWD/gdk-android-jni --ndk arm64-v8a --external-deps-dir /prebuild/armv8a
-
-gdk_clang_ndk_x86:
-  extends: .ndk_release
-  script:
-    - mkdir gdk-android-jni
-    - NUM_JOBS=16 ./tools/build.sh --install $PWD/gdk-android-jni --ndk x86 --external-deps-dir /prebuild/x86
-
-gdk_clang_ndk_x86_64:
-  extends: .ndk_release
-  script:
-    - mkdir gdk-android-jni
-    - NUM_JOBS=16 ./tools/build.sh --install $PWD/gdk-android-jni --ndk x86_64 --external-deps-dir /prebuild/x86_64
 
 test_rust:
   tags:
     - ga
+  needs: []
   variables:
-    WALLY_DIR: "/prebld/clang/libwally-core/build/lib"
+    OPENSSL_DIR: "/prebuild/clang/openssl/build/"
+    WALLY_DIR: "/prebuild/clang/libwally-core/build/lib"
     RUSTFLAGS: "-C instrument-coverage"
     RUST_BACKTRACE: "1"
     LLVM_PROFILE_FILE: "coverage-%p-%m.profraw"
   script:
     - source /root/.cargo/env
-    - cd subprojects/gdk_rust
-    - export WALLY_DIR=/prebuild/gcc/libwally-core/build/lib
-    - RUST_BACKTRACE=1 timeout 20m cargo test -- --nocapture --test-threads 6
+    - timeout 20m cargo test --manifest-path subprojects/gdk_rust/Cargo.toml -- --nocapture --test-threads 6
+    - grcov --binary-path subprojects/gdk_rust/target/debug/ -t cobertura --branch --ignore-not-existing --ignore "*cargo*" -o coverage.xml -p `pwd` subprojects/gdk_rust
+  artifacts:
+    name: ${CI_JOB_NAME}-${CI_COMMIT_REF_NAME}-${CI_COMMIT_SHA}
+    expire_in: 5 days
+    paths:
+      - coverage.xml
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml
 
-rust_audit:
-  stage: test
+
+
+build_clang_fedora:
+  image: greenaddress/fedora_ci@sha256:78997558029c74fbf6ad078b0eb75663749a216b676f6df2eb17dba8c97acc0e
   tags:
     - ga
+  stage: build
+  script:
+    - yum update
+    - yum -y install libstdc++-static
+    - source /root/.cargo/env
+    - cmake -DEXTERNAL-DEPS-DIR:PATH=/prebuild/clang -DCMAKE_TOOLCHAIN_FILE=../profiles/clang.cmake -B build-clang -S .
+    - cmake --build build-clang --parallel 16
+
+build_gcc_ubuntu18.04:
+  image: greenaddress/ubuntu_ci@sha256:bf83a3116c8fcb21e6535497c3aa7db266f4e8a823387ad30442c5a53f54bbff
+  extends: .py_release
+  stage: build
+  script:
+    - apt-get update
+    - apt-get install -y libtool-bin
+    - update-alternatives --install /usr/bin/python python /usr/bin/python2.7 10
+    - update-alternatives --install /usr/bin/python python /usr/bin/python3.6 20
+    - source /root/.cargo/env
+    - mkdir build-gcc
+    - cd build-gcc
+    - cmake -DEXTERNAL-DEPS-DIR:PATH=/prebuild/gcc -DCMAKE_TOOLCHAIN_FILE=../profiles/gcc.cmake -DCMAKE_INSTALL_PREFIX=../$INSTALL_PATH ..
+    - cmake --build . -- -j 16
+    - cmake --build . --target python-wheel
+    - cmake --build . --target install/strip
+    - cmake -DCMAKE_INSTALL_COMPONENT=gdk-dev -P cmake_install.cmake
+
+
+
+build_clang_ndk_armeabi-v7a:
+  extends: .ndk_release
+  stage: build
   script:
     - source /root/.cargo/env
-    - rustup override set 1.64.0
-    - cd subprojects/gdk_rust/
-    - cargo audit -D warnings --ignore RUSTSEC-2021-0127
-  allow_failure: true
+    - cmake -DEXTERNAL-DEPS-DIR:PATH=/prebuild/armv7a -DCMAKE_TOOLCHAIN_FILE=profiles/android-armeabi-v7a.cmake -B build-android-armeabi-v7a -S .
+    - cmake --build build-android-armeabi-v7a --parallel 16
+    - cmake --install build-android-armeabi-v7a --prefix ${INSTALL_PATH} --component gdk-runtime --strip
+    - cmake --install build-android-armeabi-v7a --prefix ${INSTALL_PATH} --component gdk-dev
 
-test_osx_clang:
-  extends: .osx_test
+build_clang_ndk_arm64-v8a:
+  extends: .ndk_release
+  stage: build
   script:
-    - cd $CI_PROJECT_DIR
-    - ./tools/clean.sh dirs
-    - virtualenv venv && source venv/bin/activate && pip install -r ./tools/requirements.txt
-    - NUM_JOBS=16 ./tools/builddeps.sh --clang --prefix $PWD/clang-deps
-    - NUM_JOBS=16 ./tools/build.sh --clang --external-deps-dir $PWD/clang-deps
+    - source /root/.cargo/env
+    - cmake -DEXTERNAL-DEPS-DIR:PATH=/prebuild/armv8a -DCMAKE_TOOLCHAIN_FILE=profiles/android-arm64-v8a.cmake -B build-android-arm64-v8a -S .
+    - cmake --build build-android-arm64-v8a --parallel 16
+    - cmake --install build-android-arm64-v8a --prefix ${INSTALL_PATH} --component gdk-runtime --strip
+    - cmake --install build-android-arm64-v8a --prefix ${INSTALL_PATH} --component gdk-dev
 
-release_osx_ios:
+build_clang_ndk_arm64-v8a-debug:
+  extends: .ndk_release
+  stage: build
+  when: manual
+  script:
+    - echo "not working... sorry"
+
+build_clang_ndk_x86:
+  extends: .ndk_release
+  stage: build
+  script:
+    - source /root/.cargo/env
+    - cmake -DEXTERNAL-DEPS-DIR:PATH=/prebuild/x86 -DCMAKE_TOOLCHAIN_FILE=profiles/android-x86.cmake -DCMAKE_BUILD_TYPE=Release -B build-android-x86 -S .
+    - cmake --build build-android-x86 --parallel 16
+    - cmake --install build-android-x86 --prefix ${INSTALL_PATH} --component gdk-runtime --strip
+    - cmake --install build-android-x86 --prefix ${INSTALL_PATH} --component gdk-dev
+
+build_clang_ndk_x86_64:
+  extends: .ndk_release
+  stage: build
+  script:
+    - source /root/.cargo/env
+    - cmake -DEXTERNAL-DEPS-DIR:PATH=/prebuild/x86_64 -DCMAKE_TOOLCHAIN_FILE=profiles/android-x86_64.cmake -B build-android-x86_64 -S .
+    - cmake --build build-android-x86_64 --parallel 16
+    - cmake --install build-android-x86_64 --prefix ${INSTALL_PATH} --component gdk-runtime --strip
+    - cmake --install build-android-x86_64 --prefix ${INSTALL_PATH} --component gdk-dev
+
+
+
+build_osx_ios:
   extends: .ios_release
+  stage: build
+  variables:
+    PREBUILT_DIR: "$CI_BUILDS_DIR/$PREBUILT_SUBDIR/ios"
   script:
     - cd $CI_PROJECT_DIR
     - ./tools/clean.sh dirs
     - virtualenv venv && source venv/bin/activate && pip install -r ./tools/requirements.txt
-    - NUM_JOBS=16 ./tools/builddeps.sh --iphone --prefix $PWD/iphone-deps
-    - NUM_JOBS=16 ./tools/build.sh --iphone static --install $PWD/gdk-iphone --external-deps-dir $PWD/iphone-deps
+    - if [[ ! -d "$PREBUILT_DIR" ]]; then ./tools/builddeps.sh --iphone --prefix $PREBUILT_DIR; fi
+    - cmake -DEXTERNAL-DEPS-DIR:PATH=$PREBUILT_DIR -DCMAKE_TOOLCHAIN_FILE=profiles/iphoneos.cmake -B build-iphone -S .
+    - cmake --build build-iphone --parallel 16
+    - cmake --install build-iphone --prefix ${INSTALL_PATH} --component gdk-runtime --strip
+    - cmake --install build-iphone --prefix ${INSTALL_PATH} --component gdk-dev
 
-release_osx_ios_sim:
+build_osx_ios_debug:
+  extends: .osx_env
+  stage: build
+  when: manual
+  variables:
+    PREBUILT_DIR: "$CI_BUILDS_DIR/$PREBUILT_SUBDIR/ios-debug"
+  script:
+    - cd $CI_PROJECT_DIR
+    - ./tools/clean.sh dirs
+    - virtualenv venv && source venv/bin/activate && pip install -r ./tools/requirements.txt
+    - if [[ ! -d "$PREBUILT_DIR" ]]; then ./tools/builddeps.sh --iphone --prefix $PREBUILT_DIR; fi
+    - cmake -DEXTERNAL-DEPS-DIR:PATH=$PREBUILT_DIR -DCMAKE_TOOLCHAIN_FILE=profiles/iphoneos.cmake -DCMAKE_BUILD_TYPE=Debug -B build-iphone -S .
+    - cmake --build build-iphone --parallel 16
+
+
+build_osx_ios_sim:
   extends: .ios_sim_release
+  stage: build
+  variables:
+    PREBUILT_DIR: "$CI_BUILDS_DIR/$PREBUILT_SUBDIR/ios-sim"
   script:
     - cd $CI_PROJECT_DIR
     - ./tools/clean.sh dirs
     - virtualenv venv && source venv/bin/activate && pip install -r ./tools/requirements.txt
-    - NUM_JOBS=16 ./tools/builddeps.sh --iphonesim --prefix $PWD/iphonesim-deps
-    - NUM_JOBS=16 ./tools/build.sh --iphonesim static --install $PWD/gdk-iphone-sim --external-deps-dir $PWD/iphonesim-deps
+    - if [[ ! -d "$PREBUILT_DIR" ]]; then ./tools/builddeps.sh --iphonesim --prefix $PREBUILT_DIR; fi
+    - cmake -DEXTERNAL-DEPS-DIR:PATH=$PREBUILT_DIR -DCMAKE_TOOLCHAIN_FILE=profiles/iphonesimulator.cmake -B build-iphonesim -S .
+    - cmake --build build-iphonesim --parallel 16
+    - cmake --install build-iphonesim --prefix ${INSTALL_PATH} --component gdk-runtime --strip
+    - cmake --install build-iphonesim --prefix ${INSTALL_PATH} --component gdk-dev
 
-release_osx_ios_debug:
-  extends: .ios_release
+build_osx_ios_sim_debug:
+  extends: .osx_env
+  stage: build
   when: manual
+  variables:
+    PREBUILT_DIR: "$CI_BUILDS_DIR/$PREBUILT_SUBDIR/ios-sim-debug"
   script:
     - cd $CI_PROJECT_DIR
     - ./tools/clean.sh dirs
     - virtualenv venv && source venv/bin/activate && pip install -r ./tools/requirements.txt
-    - NUM_JOBS=16 ./tools/builddeps.sh --iphone --buildtype debug --prefix $PWD/iphone-deps-debug
-    - NUM_JOBS=16 ./tools/build.sh --iphone static --buildtype=debug --install $PWD/gdk-iphone --external-deps-dir $PWD/iphone-deps-debug
+    - if [[ ! -d "$PREBUILT_DIR" ]]; then ./tools/builddeps.sh --iphonesim --buildtype debug --prefix $PREBUILT_DIR; fi
+    - cmake -DEXTERNAL-DEPS-DIR:PATH=$PREBUILT_DIR -DCMAKE_TOOLCHAIN_FILE=profiles/iphonesimulator.cmake -DCMAKE_BUILD_TYPE=Debug -B build-iphonesim -S .
+    - cmake --build build-iphonesim-debug --parallel 16
 
-release_osx_ios_sim_debug:
-  extends: .ios_sim_release
-  when: manual
-  script:
-    - cd $CI_PROJECT_DIR
-    - ./tools/clean.sh dirs
-    - virtualenv venv && source venv/bin/activate && pip install -r ./tools/requirements.txt
-    - NUM_JOBS=16 ./tools/builddeps.sh --iphonesim --buildtype debug --prefix $PWD/iphonesim-deps-debug
-    - NUM_JOBS=16 ./tools/build.sh --iphonesim static --buildtype=debug --install $PWD/gdk-iphone-sim --external-deps-dir $PWD/iphonesim-deps-debug
 
-test_osx_clang_ndk_armeabi-v7a:
-  only:
-    refs:
-      - master
-  extends: .osx_test
-  when: manual
-  script:
-    - cd $CI_PROJECT_DIR
-    - ./tools/clean.sh dirs
-    - virtualenv venv && source venv/bin/activate && pip install -r ./tools/requirements.txt
-    - NUM_JOBS=16 ./tools/builddeps.sh --ndk armeabi-v7a --prefix $PWD/android-armeabi-v7a
-    - NUM_JOBS=16 ANDROID_NDK=/opt/android-ndk-r23b ./tools/build.sh --ndk armeabi-v7a --external-deps-dir $PWD/android-armeabi-v7a
 
-test_osx_clang_ndk_arm64-v8a:
-  only:
-    refs:
-      - master
-  extends: .osx_test
-  when: manual
-  script:
-    - cd $CI_PROJECT_DIR
-    - ./tools/clean.sh dirs
-    - virtualenv venv && source venv/bin/activate && pip install -r ./tools/requirements.txt
-    - NUM_JOBS=16 ./tools/builddeps.sh --ndk arm64-v8a --prefix $PWD/android-arm64-v8a
-    - NUM_JOBS=16 ANDROID_NDK=/opt/ndroid-ndk-r23b ./tools/build.sh --ndk arm64-v8a --external-deps-dir $PWD/android-arm64-v8a
-
-test_osx_clang_ndk_x86:
-  only:
-    refs:
-      - master
-  extends: .osx_test
-  when: manual
-  script:
-    - cd $CI_PROJECT_DIR
-    - ./tools/clean.sh dirs
-    - virtualenv venv && source venv/bin/activate && pip install -r ./tools/requirements.txt
-    - NUM_JOBS=16 ./tools/builddeps.sh --ndk x86 --prefix $PWD/android-x86
-    - NUM_JOBS=16 ANDROID_NDK=/opt/android-ndk-r23b ./tools/build.sh --ndk x86 --external-deps-dir $PWD/android-x86
-
-test_osx_clang_ndk_x86_64:
-  only:
-    refs:
-      - master
-  when: manual
-  extends: .osx_test
-  script:
-    - cd $CI_PROJECT_DIR
-    - ./tools/clean.sh dirs
-    - virtualenv venv && source venv/bin/activate && pip install -r ./tools/requirements.txt
-    - NUM_JOBS=16 ./tools/builddeps.sh --ndk x86_64 --prefix $PWD/android-x86_64
-    - NUM_JOBS=16 ANDROID_NDK=/opt/android-ndk-r23b ./tools/build.sh --ndk x86_64 --external-deps-dir $PWD/android-x86_64
-
-test_windows_mingw_w64_cross:
+build_mingw64_windows:
   tags:
     - ga
+  stage: build
+  variables:
+    INSTALL_PATH: "install-gdk"
+  script:
+    - source /root/.cargo/env
+    - cmake -DEXTERNAL-DEPS-DIR=/prebuild/mingw-w64 -DCMAKE_TOOLCHAIN_FILE=profiles/windows-mingw-w64.cmake -B build-windows -S .
+    - cmake --build build-windows --parallel 16
+    - cmake --install build-windows --prefix $INSTALL_PATH --component gdk-runtime --strip
+    - cmake --install build-windows --prefix $INSTALL_PATH --component gdk-dev
   artifacts:
+    name: "$CI_JOB_NAME-$CI_COMMIT_SHORT_SHA"
     expire_in: 1 hour
     when: on_success
     paths:
-    - build-windows-mingw-w64/src/libgreenaddress*
-  script:
-    - NUM_JOBS=16 ./tools/build.sh --mingw-w64 --external-deps-dir /prebuild/mingw-w64
+    - $INSTALL_PATH
+
+
 
 apidocs:
   tags:
     - ga
+  stage: build
   artifacts:
     expire_in: 14 days
     when: on_success
@@ -309,6 +440,8 @@ apidocs:
     - sphinx-build -b html -a -c docs/source docs/source docs/build/html
     - cd docs/build && tar czf ../../apidocs.tar.gz html/ && cd ../..
     - deactivate
+
+
 
 package_release:
   tags:
@@ -323,7 +456,7 @@ package_release:
   script:
     - cd $CI_PROJECT_DIR
     - mkdir gdk-android-symbols
-    - mkdir gdk_dist
+    - mkdir -p gdk_dist/share/python
     - find gdk-android-jni -name "*.syms" -type f -exec cp --parents {} gdk-android-symbols \;
     - tar -czf gdk_dist/gdk-android-symbols.tar.gz gdk-android-symbols --remove-files
     - find gdk-android-jni -name "*.a" -type f -delete
@@ -331,21 +464,21 @@ package_release:
     - tar -czf gdk_dist/gdk-android-jni.tar.gz gdk-android-jni --remove-files
     - tar -czf gdk_dist/gdk-iphone.tar.gz gdk-iphone --remove-files
     - tar -czf gdk_dist/gdk-iphone-sim.tar.gz gdk-iphone-sim --remove-files
-    - mv gdk-python/*whl gdk_dist/
+    - find gdk-python/ -name *.whl -exec mv {} gdk_dist/share/python \;
     - cd gdk_dist
     - /opt/process_release
   dependencies:
-  - gdk_clang_ndk_armeabi-v7a
-  - gdk_clang_ndk_arm64-v8a
-  - gdk_clang_ndk_x86
-  - gdk_clang_ndk_x86_64
-  - release_py3m_bullseye
-  - release_py3m_ubuntu_18.04
-  - release_py3m_osx
-  - release_py3m_osx_m1
-  - release_osx_ios
-  - apidocs
-  - release_osx_ios_sim
+    - build_clang_ndk_armeabi-v7a
+    - build_clang_ndk_arm64-v8a
+    - build_clang_ndk_x86_64
+    - build_clang_ndk_x86
+    - build_clang_bullseye
+    - build_gcc_ubuntu18.04
+    - build_clang_osx
+    - build_clang_osx_m1
+    - build_osx_ios
+    - build_osx_ios_sim
+    - apidocs
 
 cp_gcloud:
   image: blockstream/gcloud-docker-tf:1.1.7
@@ -379,4 +512,5 @@ cp_gcloud_master:
     - gsutil cp -r $CI_PROJECT_DIR/gdk_dist gs://green-gdk-builds/gdk-master
   dependencies:
   - package_release
+
 
