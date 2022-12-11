@@ -103,8 +103,9 @@ pub fn download_headers(
             "invalid headers, possible reorg, invalidating latest headers and latest verified tx"
         );
         let mut cache = input.params.verified_cache()?;
-        chain.remove(input.params.network.max_reorg_blocks.unwrap_or(144))?;
-        cache.remove(input.params.network.max_reorg_blocks.unwrap_or(144))?;
+        let height = input.params.network.max_reorg_blocks.unwrap_or(144);
+        chain.remove(height)?;
+        cache.remove(height)?;
         reorg_happened = true;
     }
     info!("downloaded {:?}", chain.height());
@@ -127,7 +128,7 @@ pub fn spv_verify_tx(input: &SPVVerifyTxParams) -> Result<SPVVerifyTxResult, Err
     let txid = BETxid::from_hex(&input.txid, input.params.network.id())?;
 
     let mut cache = input.params.verified_cache()?;
-    if cache.contains(&txid, input.height)? {
+    if cache.contains(&txid, input.height) {
         info!("verified cache hit for {}", txid);
         return Ok(SPVVerifyTxResult::Verified);
     }
@@ -290,8 +291,8 @@ impl<'store> VerifiedCache<'store> {
         Ok(serde_cbor::from_slice(&plaintext)?)
     }
 
-    fn contains(&self, txid: &BETxid, height: u32) -> Result<bool, Error> {
-        Ok(self.set.contains(&(txid.clone(), height)))
+    fn contains(&self, txid: &BETxid, height: u32) -> bool {
+        self.set.contains(&(txid.clone(), height))
     }
 
     fn write(&mut self, txid: &BETxid, height: u32) -> Result<(), Error> {
