@@ -60,10 +60,9 @@ pub fn spv_verify_tx(
         headers_to_download,
     };
 
-    let mut handle = None;
-    if let NetworkId::Bitcoin(_) = id {
+    let handle = if let NetworkId::Bitcoin(_) = id {
         // Liquid doesn't need to download headers chain
-        handle = Some(thread::spawn(move || {
+        Some(thread::spawn(move || {
             let mut synced = 0;
 
             while synced < tip {
@@ -72,8 +71,10 @@ pub fn spv_verify_tx(
                 }
                 thread::sleep(Duration::from_millis(100));
             }
-        }));
-    }
+        }))
+    } else {
+        None
+    };
 
     loop {
         match headers::spv_verify_tx(&param) {
@@ -81,13 +82,25 @@ pub fn spv_verify_tx(
                 thread::sleep(Duration::from_millis(100));
             }
             Ok(SPVVerifyTxResult::Verified) => break,
-            Ok(e) => assert!(false, "status {:?}", e),
-            Err(e) => assert!(false, "error {:?}", e),
+            Ok(e) => panic!("status {:?}", e),
+            Err(e) => panic!("error {:?}", e),
         }
     }
 
-    // second should verify immediately, (and also hit cache)
-    assert!(matches!(headers::spv_verify_tx(&param), Ok(SPVVerifyTxResult::Verified)));
+    // Second should verify immediately, (and also hit cache).
+    //
+    // However, the thread spawned above that's calling `download_headers`
+    // can fail when pushing the new headers onto the chain with an
+    // `InvalidHeaders` error type. When this happens some headers will be
+    // removed from the chain (and the cache will also be trimmed, see
+    // `gdk_electrum/src/headers/mod.rs` line ~110).
+    //
+    // If this all happens between breaking out of the loop and calling
+    // `spv_verify_tx` again, the status will be
+    // `SPVVerifyTxResult::InProgress`.
+
+    let status = headers::spv_verify_tx(&param).unwrap();
+    assert!(matches!(status, SPVVerifyTxResult::Verified | SPVVerifyTxResult::InProgress));
 
     if let Some(handle) = handle {
         handle.join().unwrap();
