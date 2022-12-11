@@ -299,9 +299,10 @@ impl<'store> VerifiedCache<'store> {
         self.flush()
     }
 
-    /// remove all verified txid with height greater than given height
+    /// Remove all verified txid with height greater than or equal to the given
+    /// height.
     fn remove(&mut self, height: u32) -> Result<(), Error> {
-        self.set = self.set.iter().filter(|e| e.1 < height).cloned().collect();
+        self.set.retain(|(_t, h)| *h < height);
         self.flush()
     }
 
