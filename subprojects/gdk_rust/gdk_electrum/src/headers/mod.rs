@@ -16,10 +16,12 @@ use gdk_common::model::{
 };
 use gdk_common::store::{Decryptable, Encryptable};
 use gdk_common::NetworkId;
-use std::collections::HashSet;
-use std::fs::File;
+use once_cell::sync::Lazy;
+use std::collections::{HashMap, HashSet};
+use std::fs::{File, OpenOptions};
 use std::io::Write;
 use std::path::{Path, PathBuf};
+use std::sync::{Mutex, MutexGuard};
 
 pub mod bitcoin;
 pub mod liquid;
@@ -72,10 +74,10 @@ impl ParamsMethods for SPVCommonParams {
     }
     fn headers_chain(&self) -> Result<HeadersChain, Error> {
         let network = self.bitcoin_network().expect("headers_chain available only on bitcoin");
-        Ok(HeadersChain::new(&self.network.state_dir, network)?)
+        HeadersChain::new(&self.network.state_dir, network)
     }
     fn verified_cache(&self) -> Result<VerifiedCache, Error> {
-        Ok(VerifiedCache::new(&self.network.state_dir, self.network.id(), &self.encryption_key))
+        VerifiedCache::new(&self.network.state_dir, self.network.id(), &self.encryption_key)
     }
     fn bitcoin_network(&self) -> Option<gdk_common::bitcoin::Network> {
         self.network.id().get_bitcoin_network()
@@ -184,55 +186,107 @@ pub fn spv_verify_tx(input: &SPVVerifyTxParams) -> Result<SPVVerifyTxResult, Err
     }
 }
 
-struct VerifiedCache {
+static VERIFIED_CACHE: Lazy<Mutex<HashMap<(NetworkId, PathBuf), File>>> =
+    Lazy::new(|| Mutex::new(HashMap::new()));
+
+struct VerifiedCache<'store> {
     set: HashSet<(BETxid, u32)>,
-    store: Option<Store>,
+    store: Option<Store<'store>>,
 }
 
-struct Store {
+struct Store<'lock> {
     filepath: PathBuf,
     cipher: Aes256GcmSiv,
+    network: NetworkId,
+    guard: MutexGuard<'lock, HashMap<(NetworkId, PathBuf), File>>,
 }
 
-impl VerifiedCache {
-    /// If an `encription_key` is provided try to load a persisted cache of verified tx inside
-    /// given `path` in a file name dependent on the given `network`
-    fn new<P: AsRef<Path>>(path: P, network: NetworkId, encription_key: &Option<String>) -> Self {
-        std::fs::create_dir_all(path.as_ref()).expect("given path should be writeable");
-        match encription_key {
-            Some(key) => {
-                let mut filepath: PathBuf = path.as_ref().into();
-                let filename_preimage = format!("{:?}{}", network, key);
-                let filename = sha256::Hash::hash(filename_preimage.as_bytes()).as_ref().to_hex();
-                let key_bytes = sha256::Hash::hash(key.as_bytes()).into_inner();
-                filepath.push(format!("verified_cache_{}", filename));
-                let cipher = Aes256GcmSiv::new(Key::from_slice(&key_bytes));
-                let set = match VerifiedCache::read_and_decrypt(&mut filepath, &cipher) {
-                    Ok(set) => set,
-                    Err(_) => HashSet::new(),
-                };
-                let store = Some(Store {
-                    filepath,
-                    cipher,
-                });
-                VerifiedCache {
-                    set,
-                    store,
-                }
-            }
-            None => VerifiedCache {
-                set: HashSet::new(),
-                store: None,
-            },
-        }
+impl<'lock> Store<'lock> {
+    fn file(&mut self) -> &mut File {
+        let map = &mut *self.guard;
+        map.get_mut(&(self.network, self.filepath.clone())).unwrap()
+    }
+}
+
+fn initialize_cache_file<'a, P: AsRef<Path>>(
+    path: P,
+    network: NetworkId,
+) -> Result<MutexGuard<'a, HashMap<(NetworkId, PathBuf), File>>, Error> {
+    let path = path.as_ref();
+
+    let mut lock = VERIFIED_CACHE.lock()?;
+    let cache = &mut *lock;
+
+    if cache.get(&(network, path.to_owned())).is_some() {
+        return Ok(lock);
     }
 
-    fn read_and_decrypt(
-        filepath: &mut PathBuf,
-        cipher: &Aes256GcmSiv,
-    ) -> Result<HashSet<(BETxid, u32)>, Error> {
-        let mut file = File::open(&filepath)?;
-        let plaintext = file.decrypt(cipher)?;
+    let file = OpenOptions::new().read(true).append(true).create(true).open(path)?;
+
+    cache.insert((network, path.to_owned()), file);
+
+    Ok(lock)
+}
+
+impl<'store> VerifiedCache<'store> {
+    /// If an `encription_key` is provided try to load a persisted cache of verified tx inside
+    /// given `path` in a file name dependent on the given `network`
+    fn new<P: AsRef<Path>>(
+        path: P,
+        network: NetworkId,
+        encription_key: &Option<String>,
+    ) -> Result<Self, Error> {
+        let key = match encription_key {
+            Some(key) => key,
+
+            None => {
+                return Ok(VerifiedCache {
+                    set: HashSet::new(),
+                    store: None,
+                })
+            }
+        };
+
+        std::fs::create_dir_all(path.as_ref()).expect("given path should be writeable");
+
+        let filepath = {
+            let mut f = path.as_ref().to_owned();
+            let filename_preimage = format!("{:?}{}", network, key);
+            let filename = sha256::Hash::hash(filename_preimage.as_bytes()).as_ref().to_hex();
+            f.push(format!("verified_cache_{}", filename));
+            f
+        };
+
+        let guard = initialize_cache_file(&filepath, network)?;
+
+        let key_bytes = sha256::Hash::hash(key.as_bytes()).into_inner();
+        let cipher = Aes256GcmSiv::new(Key::from_slice(&key_bytes));
+
+        let mut store = Store {
+            filepath,
+            cipher,
+            network,
+            guard,
+        };
+
+        let set = match Self::read_and_decrypt(&mut store) {
+            Ok(set) => set,
+
+            Err(err) => {
+                warn!("Couldn't decrypt cache files due to {err:?}");
+                HashSet::new()
+            }
+        };
+
+        Ok(VerifiedCache {
+            set,
+            store: Some(store),
+        })
+    }
+
+    fn read_and_decrypt(store: &mut Store) -> Result<HashSet<(BETxid, u32)>, Error> {
+        let cipher = store.cipher.clone();
+        let plaintext = store.file().decrypt(&cipher)?;
         Ok(serde_cbor::from_slice(&plaintext)?)
     }
 
@@ -252,10 +306,10 @@ impl VerifiedCache {
     }
 
     fn flush(&mut self) -> Result<(), Error> {
-        if let Some(store) = &self.store {
+        if let Some(store) = &mut self.store {
             let plaintext = serde_cbor::to_vec(&self.set)?;
             let (nonce_bytes, ciphertext) = plaintext.encrypt(&store.cipher)?;
-            let mut file = File::create(&store.filepath)?;
+            let file = store.file();
             file.write_all(&nonce_bytes)?;
             file.write_all(&ciphertext)?;
         }

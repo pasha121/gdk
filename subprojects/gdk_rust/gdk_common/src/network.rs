@@ -55,14 +55,14 @@ pub struct NetworkParameters {
     pub state_dir: String,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ElementsNetwork {
     Liquid,
     LiquidTestnet,
     ElementsRegtest,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum NetworkId {
     Elements(ElementsNetwork),
     Bitcoin(bitcoin::Network),
