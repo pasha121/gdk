@@ -1748,6 +1748,56 @@ fn test_tor() {
 }
 
 #[test]
+fn test_get_transaction() {
+    let session = TestSession::new(false, |_| ());
+
+    let subaccount = 0;
+    let satoshi = 50_000;
+
+    let wallet_address = session.get_receive_address(subaccount).address;
+    let txid = session.node_sendtoaddress(&wallet_address, satoshi, None);
+    session.wait_tx(vec![subaccount], &txid, Some(satoshi), Some(TransactionType::Incoming));
+    session.node_generate(1);
+
+    let params = GetTransactionsOpt {
+        first: 0,
+        count: 9999,
+        subaccount,
+        num_confs: None,
+    };
+
+    let mut i = 300;
+
+    let get_tx =
+        || session.session.get_transactions(&params).unwrap().0.into_iter().next().unwrap();
+
+    let tx = loop {
+        let tx = get_tx();
+
+        if i == 0 {
+            break tx;
+        }
+
+        i -= 1;
+
+        match &*tx.spv_verified {
+            "in_progress" | "unconfirmed" => {
+                std::thread::sleep(std::time::Duration::from_millis(100))
+            }
+
+            "verified" => break tx,
+
+            _ => unreachable!(),
+        }
+    };
+
+    assert_eq!("verified", tx.spv_verified);
+
+    let tx = get_tx();
+    assert_eq!("verified", tx.spv_verified);
+}
+
+#[test]
 fn test_spv_over_period() {
     // regtest doesn't retarget after a period (2016 blocks)
     let mut test_session = TestSession::new(false, |_| ());
