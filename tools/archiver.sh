@@ -15,6 +15,9 @@ secp256k1_lib=$1/external_deps/libwally-core/build/lib/libsecp256k1.a
 wally_lib=$1/external_deps/libwally-core/build/lib/libwallycore.a
 libevent=$1/external_deps/libevent/build/lib/libevent.a
 libevent_pthread=$1/external_deps/libevent/build/lib/libevent_pthreads.a
+if [ ! -f $libevent_pthread ]; then
+    libevent_pthread=""
+fi
 libz=$1/external_deps/zlib/build/lib/libz.a
 
 libcurve25519_donna=$1/external_deps/tor/src/lib/libcurve25519_donna.a
@@ -58,26 +61,13 @@ tor_dispatch=$1/external_deps/tor/src/lib/libtor-dispatch.a
 tor_trace=$1/external_deps/tor/src/lib/libtor-trace.a
 tor_confmgt=$1/external_deps/tor/src/lib/libtor-confmgt.a
 
-libraries="$boost_chrono_lib $boost_date_time_lib $boost_log_lib $boost_system_lib $boost_thread_lib $openssl_crypto_lib $openssl_ssl_lib $secp256k1_lib $wally_lib $libevent $libevent_pthread $libcurve25519_donna $libz $tor_ed25519_donna $tor_ed25519_ref10 $tor_core $tor_keccak $tor_trunnel $tor_intmath $tor_lock $tor_malloc $tor_math $tor_memarea $tor_meminfo $tor_osinfo $tor_process $tor_sandbox $tor_smartlist_core $tor_string $tor_term $tor_time $tor_thread $tor_wallclock $tor_log $tor_tls $tor_compress $tor_container $tor_crypt_ops $tor_ctime $tor_encoding $tor_net $tor_err $tor_evloop $tor_fdio $tor_fs $tor_geoip $tor_version $tor_buf $tor_pubsub $tor_dispatch $tor_trace $tor_confmgt"
+libraries="$greenaddress_lib $boost_chrono_lib $boost_date_time_lib $boost_log_lib $boost_system_lib $boost_thread_lib $openssl_crypto_lib $openssl_ssl_lib $secp256k1_lib $wally_lib $libevent $libevent_pthread $libcurve25519_donna $libz $tor_ed25519_donna $tor_ed25519_ref10 $tor_core $tor_keccak $tor_trunnel $tor_intmath $tor_lock $tor_malloc $tor_math $tor_memarea $tor_meminfo $tor_osinfo $tor_process $tor_sandbox $tor_smartlist_core $tor_string $tor_term $tor_time $tor_thread $tor_wallclock $tor_log $tor_tls $tor_compress $tor_container $tor_crypt_ops $tor_ctime $tor_encoding $tor_net $tor_err $tor_evloop $tor_fdio $tor_fs $tor_geoip $tor_version $tor_buf $tor_pubsub $tor_dispatch $tor_trace $tor_confmgt"
 if [ -f "$gdk_rust" ]; then
   libraries="$libraries $gdk_rust"
 fi
 
+options="--tag=C --mode=link $2 -all-static"
 if [ "$(uname)" = "Darwin" ]; then
-  obj_dir=$1/src/*@@greenaddress@sha
-  if [ ! -d "$obj_dir" ]; then
-    obj_dir=$1/src/libgreenaddress.dylib.p
-  fi
-  libtool -static -o $1/src/libgreenaddress_full.a $libraries $obj_dir/*.o
-else
-  echo "create $1/src/libgreenaddress_full.a" > $1/src/libgreenaddress.mri
-  for lib in $libraries; do
-    if [ -f $lib ]; then
-        echo "addlib $lib" >> $1/src/libgreenaddress.mri
-    fi
-  done
-  echo "addlib ${greenaddress_lib}" >> $1/src/libgreenaddress.mri
-  echo "save" >> $1/src/libgreenaddress.mri
-  echo "end" >> $1/src/libgreenaddress.mri
-  $2 -M < $1/src/libgreenaddress.mri
+    options="-static"
 fi
+libtool $options -o $1/src/libgreenaddress_full.a $libraries

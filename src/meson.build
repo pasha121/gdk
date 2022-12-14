@@ -175,7 +175,7 @@ if not cross_android_build
     archiver_depends = [libga.get_static_lib(), gdk_rust_target]
     archiver = custom_target('archiver',
                              output : 'libgreenaddress_full.a',
-                             command : [join_paths(meson.source_root(), 'tools', 'archiver.sh'), meson.build_root(), ar],
+                             command : [join_paths(meson.source_root(), 'tools', 'archiver.sh'), meson.build_root(), compiler.cmd_array()[0]],
                              build_by_default : true,
                              install : true,
                              install_dir : libga_installdir,
