@@ -95,10 +95,14 @@ pub fn download_headers(
     let client = input.params.build_client()?;
     let mut chain = input.params.headers_chain()?;
     let headers_to_download = input.headers_to_download.unwrap_or(2016);
-    let headers = client.block_headers(chain.height() as usize + 1, headers_to_download)?.headers;
-    info!("height:{} downloaded_headers:{}", chain.height(), headers.len());
+
+    let height = chain.height() as usize;
+    let headers = client.block_headers(height + 1, headers_to_download)?.headers;
+    info!("height:{} downloaded_headers:{}", height, headers.len());
+
     let mut reorg_happened = false;
-    if let Err(Error::InvalidHeaders) = chain.push(headers) {
+    let len = headers.len();
+    if let Err(Error::InvalidHeaders) = chain.push(headers, height + len) {
         warn!(
             "invalid headers, possible reorg, invalidating latest headers and latest verified tx"
         );

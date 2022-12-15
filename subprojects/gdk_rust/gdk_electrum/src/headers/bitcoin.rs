@@ -9,7 +9,7 @@ use gdk_common::bitcoin::consensus::{deserialize, serialize};
 use gdk_common::bitcoin::hashes::hex::FromHex;
 use gdk_common::bitcoin::{BlockHash, Txid};
 use gdk_common::bitcoin::{BlockHeader, Network};
-use gdk_common::log::{info, warn};
+use gdk_common::log::info;
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
 use std::fs::{File, OpenOptions};
@@ -68,6 +68,7 @@ pub struct HeadersChain {
     height: u32,
     last: BlockHeader,
     checkpoints: HashMap<u32, BlockHash>,
+    bytes: Vec<u8>,
     pub network: Network,
 }
 
@@ -85,28 +86,25 @@ impl HeadersChain {
 
         let checkpoints = get_checkpoints(network);
 
-        let (height, last) = with_header_file(&filepath, network, |file| {
+        let bytes = with_header_file(&filepath, network, |file| {
             let file_size = file.metadata()?.len();
-
             if file_size % 80 != 0 || file_size < 80 {
                 return Err(Error::InvalidHeaders);
             }
-
-            let wanted_seek = file_size - 80;
-            let effective_seek = file.seek(SeekFrom::Start(wanted_seek))?;
-            if wanted_seek != effective_seek {
-                warn!("Seek failed wanted:{} effective:{}", wanted_seek, effective_seek);
-                return Err(Error::Generic("failed seek".into()));
-            }
-            let mut buf = [0u8; 80];
-            file.read_exact(&mut buf)?;
-            let height = (file_size as u32 / 80) - 1;
-            Ok((height, deserialize(&buf)?))
+            let mut buf = Vec::with_capacity(file_size as usize);
+            file.seek(SeekFrom::Start(0))?;
+            file.read_to_end(&mut buf)?;
+            Ok(buf)
         })?;
+
+        let height = ((bytes.len() / 80) - 1) as u32;
+
+        let last = deserialize(&bytes[bytes.len() - 80..])?;
 
         Ok(HeadersChain {
             path: filepath,
             height,
+            bytes,
             last,
             checkpoints,
             network,
@@ -149,18 +147,11 @@ impl HeadersChain {
     }
 
     pub fn get(&self, height: u32) -> Result<BlockHeader, Error> {
-        with_header_file(&self.path, self.network, |file| {
-            let wanted_seek = height as u64 * 80;
-            let effective_seek = file.seek(SeekFrom::Start(wanted_seek))?;
-            if wanted_seek != effective_seek {
-                warn!("Seek failed wanted:{} effective:{}", wanted_seek, effective_seek);
-                return Err(Error::Generic("failed seek".into()));
-            }
-            let mut buf = [0u8; 80];
-            file.read_exact(&mut buf)?;
-            let header: BlockHeader = deserialize(&buf)?;
-            Ok(header)
-        })
+        if height > self.height {
+            return Err(Error::InvalidHeaders);
+        }
+        let start = (height * 80) as usize;
+        deserialize(&self.bytes[start..start + 80]).map_err(Into::into)
     }
 
     /// to handle reorgs, it's necessary to remove some of the last headers
@@ -168,9 +159,9 @@ impl HeadersChain {
         let headers_to_remove = headers_to_remove.min(self.height);
         let new_height = self.height - headers_to_remove;
         let new_size = (new_height + 1) as u64 * 80;
+        self.bytes.truncate(new_size as usize);
         self.last = self.get(new_height)?;
         self.height = new_height;
-
         with_header_file(&self.path, self.network, |file| {
             file.set_len(new_size)?;
             Ok(())
@@ -182,62 +173,81 @@ impl HeadersChain {
     }
 
     /// write new headers to the file if checks are passed
-    pub fn push(&mut self, new_headers: Vec<BlockHeader>) -> Result<(), Error> {
-        let mut curr_bits = self.curr_bits()?;
-        let mut serialized = Vec::with_capacity(new_headers.len() * 80);
-        let mut cache = HashMap::new();
-        for new_header in new_headers {
-            let new_height = self.height + 1;
-            if self.last.block_hash() != new_header.prev_blockhash
-                || new_header.validate_pow(&new_header.target()).is_err()
-            {
-                return Err(Error::InvalidHeaders);
-            }
+    pub fn push(&mut self, new_headers: Vec<BlockHeader>, new_height: usize) -> Result<(), Error> {
+        let path = self.path.clone();
 
-            if new_height % DIFFCHANGE_INTERVAL == 0 {
-                if let Network::Regtest = self.network {
-                    // regtest doesn't retarget https://github.com/bitcoin/bitcoin/blob/7fcf53f7b4524572d1d0c9a5fdc388e87eb02416/src/pow.cpp#L51
-                } else {
-                    let first_height = new_height - DIFFCHANGE_INTERVAL;
-                    let first = match cache.remove(&first_height) {
-                        Some(header) => header,
-                        None => self.get(first_height)?,
-                    };
-                    let new_target = calc_difficulty_retarget(&first, &self.last);
-                    if new_header.bits != BlockHeader::compact_target_from_u256(&new_target) {
-                        return Err(Error::InvalidHeaders);
-                    }
-                    curr_bits = new_header.bits;
-                }
-            } else {
-                if new_header.bits != curr_bits {
-                    if !self.pow_allow_min_difficulty_blocks()
-                        || new_header.difficulty(self.network) != 1
-                        || new_header.time.checked_sub(self.last.time).unwrap_or(0)
-                            <= 2 * TARGET_BLOCK_SPACING
-                    {
-                        return Err(Error::InvalidHeaders);
-                    }
-                }
-            }
-            if let Some(hash) = self.checkpoints.get(&new_height) {
-                if hash != &new_header.block_hash() {
+        with_header_file(&path, self.network, |file| {
+            let mut curr_bits = self.curr_bits()?;
+            let mut serialized = Vec::with_capacity(new_headers.len() * 80);
+            let mut cache = HashMap::new();
+
+            let len = new_headers.len();
+            let new_headers =
+                new_headers.into_iter().skip(len + self.height() as usize - new_height);
+
+            for new_header in new_headers {
+                let new_height = self.height + 1;
+                if self.last.block_hash() != new_header.prev_blockhash
+                    || new_header.validate_pow(&new_header.target()).is_err()
+                {
                     return Err(Error::InvalidHeaders);
                 }
-                info!("checkpoint {} {} is ok", new_height, hash);
+
+                if new_height % DIFFCHANGE_INTERVAL == 0 {
+                    if let Network::Regtest = self.network {
+                        // regtest doesn't retarget https://github.com/bitcoin/bitcoin/blob/7fcf53f7b4524572d1d0c9a5fdc388e87eb02416/src/pow.cpp#L51
+                    } else {
+                        let first_height = new_height - DIFFCHANGE_INTERVAL;
+                        let first = match cache.remove(&first_height) {
+                            Some(header) => header,
+                            None => self.get(first_height)?,
+                        };
+                        let new_target = calc_difficulty_retarget(&first, &self.last);
+                        if new_header.bits != BlockHeader::compact_target_from_u256(&new_target) {
+                            return Err(Error::InvalidHeaders);
+                        }
+                        curr_bits = new_header.bits;
+                    }
+                } else {
+                    if new_header.bits != curr_bits {
+                        if !self.pow_allow_min_difficulty_blocks()
+                            || new_header.difficulty(self.network) != 1
+                            || new_header.time.checked_sub(self.last.time).unwrap_or(0)
+                                <= 2 * TARGET_BLOCK_SPACING
+                        {
+                            return Err(Error::InvalidHeaders);
+                        }
+                    }
+                }
+                if let Some(hash) = self.checkpoints.get(&new_height) {
+                    if hash != &new_header.block_hash() {
+                        return Err(Error::InvalidHeaders);
+                    }
+                    info!("checkpoint {} {} is ok", new_height, hash);
+                }
+                cache.insert(new_height, new_header.clone());
+                serialized.extend(serialize(&new_header));
+                self.last = new_header;
             }
-            cache.insert(new_height, new_header.clone());
-            serialized.extend(serialize(&new_header));
-            self.last = new_header;
-            self.height = new_height;
-        }
-        self.flush(&mut serialized)?;
+
+            self.height = new_height as u32;
+            self.bytes.extend(&serialized);
+
+            if !serialized.is_empty() {
+                file.write_all(&serialized)?;
+                file.flush()?;
+            }
+
+            Ok(())
+        })?;
+
         info!(
             "chain tip height {} hash {} file {:?}",
             self.height,
             self.tip().block_hash(),
             self.path
         );
+
         Ok(())
     }
 
@@ -261,7 +271,7 @@ impl HeadersChain {
 
     /// write `serialized` bytes to the file, forcing flush so we are sure next `get()` will have
     /// also this data if requested
-    fn flush(&mut self, serialized: &mut Vec<u8>) -> Result<(), Error> {
+    fn _flush(&mut self, serialized: &mut Vec<u8>) -> Result<(), Error> {
         if !serialized.is_empty() {
             with_header_file(&self.path, self.network, |file| {
                 file.write_all(&serialized)?;
@@ -323,7 +333,7 @@ mod test {
 
         let temp = TempDir::new().unwrap();
         let mut chain = HeadersChain::new(&temp, Network::Bitcoin).unwrap();
-        chain.push(parsed_headers).unwrap();
+        chain.push(parsed_headers, 199).unwrap();
         assert_eq!(chain.height(), 199);
 
         assert_eq!(
@@ -385,7 +395,7 @@ mod test {
         assert!(chain.verify_tx_proof(&txid, block_height as u32, merkle_tree).is_err());
 
         assert!(
-            chain.push(vec![chain.get(100).unwrap()]).is_err(),
+            chain.push(vec![chain.get(100).unwrap()], 200).is_err(),
             "pushing a previous block should err"
         );
 
@@ -393,7 +403,7 @@ mod test {
         chain.remove(1).unwrap();
         assert_eq!(chain.height, 198);
         assert!(chain.get(199).is_err());
-        chain.push(vec![old_tip]).unwrap();
+        chain.push(vec![old_tip], 199).unwrap();
         assert_eq!(chain.height, 199);
         assert_eq!(
             BlockHash::from_hex("00000000e85458c1467176b04a65d5efaccfecaaab717b17a587b4069276e143")

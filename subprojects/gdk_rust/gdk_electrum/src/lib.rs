@@ -1211,9 +1211,10 @@ impl Headers {
     pub fn ask(&mut self, chunk_size: usize, client: &Client) -> Result<usize, Error> {
         if let ChainOrVerifier::Chain(chain) = &mut self.checker {
             info!("asking headers, current height:{} chunk_size:{} ", chain.height(), chunk_size);
-            let headers = client.block_headers(chain.height() as usize + 1, chunk_size)?.headers;
+            let height = chain.height() as usize;
+            let headers = client.block_headers(height + 1, chunk_size)?.headers;
             let len = headers.len();
-            chain.push(headers)?;
+            chain.push(headers, height + len)?;
             Ok(len)
         } else {
             // Liquid doesn't need to download the header's chain
