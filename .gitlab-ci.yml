@@ -74,18 +74,24 @@ test_format:
 release_py3m_bullseye:
   extends: .py_release
   script:
+    - apt-get update
+    - apt-get install libtool-bin
     - NUM_JOBS=16 ./tools/build.sh --install $PWD/gdk-python --gcc --python-version 3.9 --external-deps-dir /prebld/gcc
 
 release_py3m_bullseye_debug:
   extends: .py_release
   when: manual
   script:
+    - apt-get update
+    - apt-get install libtool-bin
     - NUM_JOBS=16 ./tools/build.sh --buildtype=debug --install $PWD/gdk-python --gcc --python-version 3.9 --external-deps-dir /prebld/gcc
 
 release_py3m_ubuntu_18.04:
   image: greenaddress/ubuntu_ci@sha256:bf83a3116c8fcb21e6535497c3aa7db266f4e8a823387ad30442c5a53f54bbff
   extends: .py_release
   script:
+    - apt-get update
+    - apt-get install libtool-bin
     - NUM_JOBS=16 ./tools/build.sh --install $PWD/gdk-python --gcc --python-version 3.6 --external-deps-dir /prebuild/gcc
 
 release_py3m_osx:
@@ -123,6 +129,8 @@ test_clang_debug:
   tags:
     - ga
   script:
+    - apt-get update
+    - apt-get -y install libtool-bin
     - NUM_JOBS=16 ./tools/build.sh --clang --buildtype debug --enable-tests --external-deps-dir /prebld/clang-debug # REVERTME
     - ./build-clang/test_aes_gcm >/dev/null
     - ./build-clang/test_json
@@ -300,6 +308,8 @@ test_windows_mingw_w64_cross:
     paths:
     - build-windows-mingw-w64/src/libgreenaddress*
   script:
+    - apt-get update
+    - apt-get -y install libtool-bin
     - NUM_JOBS=16 ./tools/build.sh --mingw-w64 --external-deps-dir /prebld/mingw-w64
 
 apidocs:
