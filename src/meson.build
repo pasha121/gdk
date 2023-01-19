@@ -20,6 +20,7 @@ cpp_headers = [
            'http_client.hpp',
            'logging.hpp',
            'memory.hpp',
+           'networks.hpp',
            'network_parameters.hpp',
            'session.hpp',
            'signer.hpp',
