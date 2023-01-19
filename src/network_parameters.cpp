@@ -806,165 +806,161 @@ static std::mutex registered_networks_mutex;
 } // namespace
 
 namespace ga::sdk {
-    namespace {
-        static std::string get_url(
-            const nlohmann::json& details, const char* url_key, const char* onion_key, bool use_tor)
-        {
-            if (use_tor) {
-                std::string onion = details.at(onion_key);
-                if (!onion.empty()) {
-                    return onion;
-                }
-            }
-            return details.at(url_key);
-        }
-
-        template <typename T>
-        static void set_override(nlohmann::json& ret, const std::string& key, const nlohmann::json& src, T default_)
-        {
-            // Use the users provided value, else the registered value, else `default_`
-            ret[key] = src.value(key, ret.value(key, default_));
-        }
-
-        static auto get_network_overrides(const nlohmann::json& user_overrides, nlohmann::json& defaults)
-        {
-            // Set override-able settings from the users parameters
-            set_override(defaults, "electrum_tls", user_overrides, false);
-            set_override(defaults, "electrum_url", user_overrides, std::string());
-            set_override(defaults, "spv_multi", user_overrides, false);
-            set_override(defaults, "spv_servers", user_overrides, nlohmann::json::array());
-            set_override(defaults, "spv_enabled", user_overrides, false);
-            set_override(defaults, "use_tor", user_overrides, false);
-            set_override(defaults, "user_agent", user_overrides, std::string());
-            set_override(defaults, "cert_expiry_threshold", user_overrides, 1);
-            set_override(defaults, "proxy", user_overrides, std::string());
-            set_override(defaults, "price_url", user_overrides, std::string());
-            set_override(defaults, "price_onion_url", user_overrides, std::string());
-            defaults["state_dir"] = gdk_config().value("datadir", std::string()) + "/state";
-            return defaults;
-        }
-    } // namespace
-
-    network_parameters::network_parameters(const nlohmann::json& details)
-        : m_details(details)
+namespace {
+    static std::string get_url(const nlohmann::json& details, const char* url_key, const char* onion_key, bool use_tor)
     {
-    }
-
-    network_parameters::network_parameters(const nlohmann::json& user_overrides, nlohmann::json& defaults)
-        : m_details(get_network_overrides(user_overrides, defaults))
-    {
-    }
-
-    network_parameters::~network_parameters() = default;
-
-    void network_parameters::add(const std::string& name, const nlohmann::json& details)
-    {
-        std::unique_lock<std::mutex> l{ registered_networks_mutex };
-
-        const auto p = registered_networks.find(name);
-        const bool found = p != registered_networks.end();
-        if (details.is_null() || details.empty()) {
-            // Remove
-            if (found) {
-                registered_networks.erase(p);
-            }
-        } else {
-            // Validate and add, overwriting any existing entry
-            // WARNING: it might throw if json is not complete
-            auto np = details.get<networks::network_config>();
-            registered_networks[name] = np;
-        }
-    }
-
-    nlohmann::json network_parameters::get_all()
-    {
-        // We manually order mainnet/liquid/testnet first for nice wallet/UX display ordering
-        std::vector<std::string> all_networks{ "mainnet", "liquid", "testnet", "testnet-liquid" };
-        nlohmann::json ret;
-
-        std::unique_lock<std::mutex> l{ registered_networks_mutex };
-        all_networks.reserve(registered_networks.size());
-        for (const auto& p : registered_networks) {
-            ret[p.first] = p.second;
-            if (std::find(all_networks.begin(), all_networks.end(), p.first) == all_networks.end()) {
-                all_networks.emplace_back(p.first);
+        if (use_tor) {
+            std::string onion = details.at(onion_key);
+            if (!onion.empty()) {
+                return onion;
             }
         }
-        ret["all_networks"] = all_networks;
-        return ret;
+        return details.at(url_key);
     }
 
-    nlohmann::json network_parameters::get(const std::string& name)
+    template <typename T>
+    static void set_override(nlohmann::json& ret, const std::string& key, const nlohmann::json& src, T default_)
     {
-        std::unique_lock<std::mutex> l{ registered_networks_mutex };
+        // Use the users provided value, else the registered value, else `default_`
+        ret[key] = src.value(key, ret.value(key, default_));
+    }
 
-        const auto p = registered_networks.find(name);
-        if (p == registered_networks.end()) {
-            throw user_error("Unknown network");
+    static auto get_network_overrides(const nlohmann::json& user_overrides, nlohmann::json& defaults)
+    {
+        // Set override-able settings from the users parameters
+        set_override(defaults, "electrum_tls", user_overrides, false);
+        set_override(defaults, "electrum_url", user_overrides, std::string());
+        set_override(defaults, "spv_multi", user_overrides, false);
+        set_override(defaults, "spv_servers", user_overrides, nlohmann::json::array());
+        set_override(defaults, "spv_enabled", user_overrides, false);
+        set_override(defaults, "use_tor", user_overrides, false);
+        set_override(defaults, "user_agent", user_overrides, std::string());
+        set_override(defaults, "cert_expiry_threshold", user_overrides, 1);
+        set_override(defaults, "proxy", user_overrides, std::string());
+        set_override(defaults, "price_url", user_overrides, std::string());
+        set_override(defaults, "price_onion_url", user_overrides, std::string());
+        defaults["state_dir"] = gdk_config().value("datadir", std::string()) + "/state";
+        return defaults;
+    }
+} // namespace
+
+network_parameters::network_parameters(const nlohmann::json& details)
+    : m_details(details)
+{
+}
+
+network_parameters::network_parameters(const nlohmann::json& user_overrides, nlohmann::json& defaults)
+    : m_details(get_network_overrides(user_overrides, defaults))
+{
+}
+
+network_parameters::~network_parameters() = default;
+
+void network_parameters::add(const std::string& name, const nlohmann::json& details)
+{
+    std::unique_lock<std::mutex> l{ registered_networks_mutex };
+
+    const auto p = registered_networks.find(name);
+    const bool found = p != registered_networks.end();
+    if (details.is_null() || details.empty()) {
+        // Remove
+        if (found) {
+            registered_networks.erase(p);
         }
-        return p->second;
+    } else {
+        // Validate and add, overwriting any existing entry
+        // WARNING: it might throw if json is not complete
+        auto np = details.get<networks::network_config>();
+        registered_networks[name] = np;
     }
+}
 
-    std::string network_parameters::network() const { return m_details.at("network"); }
-    std::string network_parameters::gait_wamp_url() const { return m_details.at("wamp_url"); }
-    std::vector<std::string> network_parameters::gait_wamp_cert_pins() const { return m_details.at("wamp_cert_pins"); }
-    std::vector<std::string> network_parameters::gait_wamp_cert_roots() const
-    {
-        return m_details.at("wamp_cert_roots");
+nlohmann::json network_parameters::get_all()
+{
+    // We manually order mainnet/liquid/testnet first for nice wallet/UX display ordering
+    std::vector<std::string> all_networks{ "mainnet", "liquid", "testnet", "testnet-liquid" };
+    nlohmann::json ret;
+
+    std::unique_lock<std::mutex> l{ registered_networks_mutex };
+    all_networks.reserve(registered_networks.size());
+    for (const auto& p : registered_networks) {
+        ret[p.first] = p.second;
+        if (std::find(all_networks.begin(), all_networks.end(), p.first) == all_networks.end()) {
+            all_networks.emplace_back(p.first);
+        }
     }
-    std::string network_parameters::block_explorer_address() const { return m_details.at("address_explorer_url"); }
-    std::string network_parameters::block_explorer_tx() const { return m_details.at("tx_explorer_url"); }
-    std::string network_parameters::chain_code() const { return m_details.at("service_chain_code"); }
-    bool network_parameters::electrum_tls() const { return m_details.at("electrum_tls"); }
-    std::string network_parameters::electrum_url() const
-    {
-        return get_url(m_details, "electrum_url", "electrum_onion_url", use_tor());
+    ret["all_networks"] = all_networks;
+    return ret;
+}
+
+nlohmann::json network_parameters::get(const std::string& name)
+{
+    std::unique_lock<std::mutex> l{ registered_networks_mutex };
+
+    const auto p = registered_networks.find(name);
+    if (p == registered_networks.end()) {
+        throw user_error("Unknown network");
     }
-    std::string network_parameters::get_pin_server_url() const
-    {
-        return get_url(m_details, "pin_server_url", "pin_server_onion_url", use_tor());
-    }
-    std::string network_parameters::get_pin_server_public_key() const { return m_details.at("pin_server_public_key"); }
-    std::string network_parameters::pub_key() const { return m_details.at("service_pubkey"); }
-    std::string network_parameters::gait_onion() const { return m_details.at("wamp_onion_url"); }
-    std::string network_parameters::policy_asset() const { return m_details.value("policy_asset", std::string()); }
-    std::string network_parameters::bip21_prefix() const { return m_details.at("bip21_prefix"); }
-    std::string network_parameters::bech32_prefix() const { return m_details.at("bech32_prefix"); }
-    std::string network_parameters::blech32_prefix() const { return m_details.value("blech32_prefix", std::string()); }
-    unsigned char network_parameters::btc_version() const { return m_details.at("p2pkh_version"); }
-    unsigned char network_parameters::btc_p2sh_version() const { return m_details.at("p2sh_version"); }
-    uint32_t network_parameters::blinded_prefix() const { return m_details.at("blinded_prefix"); }
-    bool network_parameters::is_main_net() const { return m_details.at("mainnet"); }
-    bool network_parameters::is_liquid() const { return m_details.value("liquid", false); }
-    bool network_parameters::is_development() const { return m_details.at("development"); }
-    bool network_parameters::is_electrum() const { return m_details.value("server_type", std::string()) == "electrum"; }
-    bool network_parameters::is_lightning() const { return m_details.at("lightning"); }
-    bool network_parameters::use_tor() const { return m_details.value("use_tor", false); }
-    bool network_parameters::is_spv_enabled() const { return m_details.at("spv_enabled"); }
-    std::string network_parameters::user_agent() const { return m_details.value("user_agent", std::string()); }
-    std::string network_parameters::get_connection_string() const { return use_tor() ? gait_onion() : gait_wamp_url(); }
-    std::string network_parameters::get_registry_connection_string() const
-    {
-        return get_url(m_details, "asset_registry_url", "asset_registry_onion_url", use_tor());
-    }
-    bool network_parameters::is_tls_connection() const
-    {
-        return boost::algorithm::starts_with(get_connection_string(), "wss://");
-    }
-    std::vector<uint32_t> network_parameters::csv_buckets() const { return m_details.at("csv_buckets"); }
-    uint32_t network_parameters::cert_expiry_threshold() const { return m_details.at("cert_expiry_threshold"); }
-    // max_reorg_blocks indicates the maximum number of blocks that gdk will expect to re-org on-chain.
-    // In the event that a re-org is larger than this value, AND the user has a tx re-orged in a block
-    // older than the current tip minus max_reorg_blocks, cached data may become out of date and will
-    // need to be removed. The values chosen are designed to make this scenario extremely unlikely:
-    // Liquid does not have re-orgs beyond possibly the tip so is set to 2 blocks.
-    // BTC mainnet is set to one day (144 blocks), more than 2x the largest ever (53 block) re-org seen.
-    // BTC testnet/regtest are set to one week (7 * 144 blocks), this allows regtest test runs under
-    // a weeks worth of blocks without cache deletion, and for testnet still allows cache finalization
-    // testing while being unnaffected by normal chain operation.
-    uint32_t network_parameters::get_max_reorg_blocks() const { return m_details.at("max_reorg_blocks"); }
-    std::string network_parameters::get_price_url() const
-    {
-        return get_url(m_details, "price_url", "price_onion_url", use_tor());
-    }
+    return p->second;
+}
+
+std::string network_parameters::network() const { return m_details.at("network"); }
+std::string network_parameters::gait_wamp_url() const { return m_details.at("wamp_url"); }
+std::vector<std::string> network_parameters::gait_wamp_cert_pins() const { return m_details.at("wamp_cert_pins"); }
+std::vector<std::string> network_parameters::gait_wamp_cert_roots() const { return m_details.at("wamp_cert_roots"); }
+std::string network_parameters::block_explorer_address() const { return m_details.at("address_explorer_url"); }
+std::string network_parameters::block_explorer_tx() const { return m_details.at("tx_explorer_url"); }
+std::string network_parameters::chain_code() const { return m_details.at("service_chain_code"); }
+bool network_parameters::electrum_tls() const { return m_details.at("electrum_tls"); }
+std::string network_parameters::electrum_url() const
+{
+    return get_url(m_details, "electrum_url", "electrum_onion_url", use_tor());
+}
+std::string network_parameters::get_pin_server_url() const
+{
+    return get_url(m_details, "pin_server_url", "pin_server_onion_url", use_tor());
+}
+std::string network_parameters::get_pin_server_public_key() const { return m_details.at("pin_server_public_key"); }
+std::string network_parameters::pub_key() const { return m_details.at("service_pubkey"); }
+std::string network_parameters::gait_onion() const { return m_details.at("wamp_onion_url"); }
+std::string network_parameters::policy_asset() const { return m_details.value("policy_asset", std::string()); }
+std::string network_parameters::bip21_prefix() const { return m_details.at("bip21_prefix"); }
+std::string network_parameters::bech32_prefix() const { return m_details.at("bech32_prefix"); }
+std::string network_parameters::blech32_prefix() const { return m_details.value("blech32_prefix", std::string()); }
+unsigned char network_parameters::btc_version() const { return m_details.at("p2pkh_version"); }
+unsigned char network_parameters::btc_p2sh_version() const { return m_details.at("p2sh_version"); }
+uint32_t network_parameters::blinded_prefix() const { return m_details.at("blinded_prefix"); }
+bool network_parameters::is_main_net() const { return m_details.at("mainnet"); }
+bool network_parameters::is_liquid() const { return m_details.value("liquid", false); }
+bool network_parameters::is_development() const { return m_details.at("development"); }
+bool network_parameters::is_electrum() const { return m_details.value("server_type", std::string()) == "electrum"; }
+bool network_parameters::is_lightning() const { return m_details.at("lightning"); }
+bool network_parameters::use_tor() const { return m_details.value("use_tor", false); }
+bool network_parameters::is_spv_enabled() const { return m_details.at("spv_enabled"); }
+std::string network_parameters::user_agent() const { return m_details.value("user_agent", std::string()); }
+std::string network_parameters::get_connection_string() const { return use_tor() ? gait_onion() : gait_wamp_url(); }
+std::string network_parameters::get_registry_connection_string() const
+{
+    return get_url(m_details, "asset_registry_url", "asset_registry_onion_url", use_tor());
+}
+bool network_parameters::is_tls_connection() const
+{
+    return boost::algorithm::starts_with(get_connection_string(), "wss://");
+}
+std::vector<uint32_t> network_parameters::csv_buckets() const { return m_details.at("csv_buckets"); }
+uint32_t network_parameters::cert_expiry_threshold() const { return m_details.at("cert_expiry_threshold"); }
+// max_reorg_blocks indicates the maximum number of blocks that gdk will expect to re-org on-chain.
+// In the event that a re-org is larger than this value, AND the user has a tx re-orged in a block
+// older than the current tip minus max_reorg_blocks, cached data may become out of date and will
+// need to be removed. The values chosen are designed to make this scenario extremely unlikely:
+// Liquid does not have re-orgs beyond possibly the tip so is set to 2 blocks.
+// BTC mainnet is set to one day (144 blocks), more than 2x the largest ever (53 block) re-org seen.
+// BTC testnet/regtest are set to one week (7 * 144 blocks), this allows regtest test runs under
+// a weeks worth of blocks without cache deletion, and for testnet still allows cache finalization
+// testing while being unnaffected by normal chain operation.
+uint32_t network_parameters::get_max_reorg_blocks() const { return m_details.at("max_reorg_blocks"); }
+std::string network_parameters::get_price_url() const
+{
+    return get_url(m_details, "price_url", "price_onion_url", use_tor());
+}
 } // namespace ga::sdk
