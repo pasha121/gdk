@@ -27,6 +27,7 @@ impl AssetsOrIcons {
         2
     }
 
+    #[cfg(test)]
     pub(crate) fn iter() -> impl ExactSizeIterator<Item = Self> {
         [Self::Assets, Self::Icons].into_iter()
     }
