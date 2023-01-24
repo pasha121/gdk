@@ -45,7 +45,8 @@ namespace sdk {
         GDK_RUNTIME_ASSERT(!json_get_value(config, "datadir").empty());
         GDK_RUNTIME_ASSERT(!init_done);
 
-        global_config = config;
+        nlohmann::json& cfg = const_cast<nlohmann::json&>(config);
+        global_config = std::move(cfg);
         if (!global_config.contains("tordir")) {
             const std::string datadir = global_config["datadir"];
             global_config.emplace("tordir", datadir + "/tor");
